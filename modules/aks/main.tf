@@ -8,8 +8,6 @@ terraform {
   }
 }
 
-data "azurerm_client_config" "current" {}
-
 # Log Analytics Workspace for AKS logging
 resource "azurerm_log_analytics_workspace" "main" {
   name                = "${var.environment}-aks-logs"
