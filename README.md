@@ -4,6 +4,61 @@
 
 This is a weather application based on the Azure cloud platform, using Terraform for Infrastructure as Code (IaC) management. The project adopts a microservices architecture, including a frontend weather application and backend infrastructure modules. This project demonstrates DevOps practices with automated CI/CD pipelines using GitHub Actions.
 
+## 🚀 Current Deployment Status
+
+### ✅ Successfully Deployed Components
+
+- **AKS Cluster**: `dev-aks` running in East US region
+- **Azure Container Registry**: `cst8918acr` with weather-app image
+- **Network Infrastructure**: Virtual network with proper subnet configuration
+- **Weather Application**: Successfully deployed and accessible externally
+- **Load Balancer**: External IP `20.246.216.138` with proper health checks
+
+### 🔧 Recent Issues Resolved
+
+#### 1. AKS Connection Timeout Issue
+**Problem**: Initial kubectl connection timeout to AKS cluster
+**Solution**: 
+- Updated API server authorized IP ranges to include current public IP `174.112.71.173/32`
+- Refreshed kubectl credentials using `az aks get-credentials`
+
+#### 2. Docker Image Pull Issues
+**Problem**: ImagePullBackOff errors due to missing Docker image and authentication
+**Solution**:
+- Built and pushed weather-app Docker image to ACR using multi-platform build
+- Attached ACR to AKS cluster for authentication
+- Reduced resource requests to fit node capacity
+
+#### 3. Firewall/Network Security Group Issues
+**Problem**: External access blocked by NSG rules
+**Solution**:
+- Added NodePort 32199 rule to allow LoadBalancer health checks
+- Configured proper NSG rule priorities (100-4096)
+- Verified all required ports (80, 443, 32199) are accessible
+
+### 🌐 Application Access
+
+**External URL**: http://20.246.216.138
+
+**Available Endpoints**:
+- **Health Check**: `GET /health` - Returns application status
+- **Weather API**: `GET /api/weather?city={city}` - Returns weather data
+- **Main Page**: `GET /` - Interactive weather application UI
+
+**Example API Response**:
+```json
+{
+  "city": "Toronto",
+  "temperature": 32,
+  "condition": "Clouds", 
+  "description": "broken clouds",
+  "humidity": 42,
+  "windSpeed": 5,
+  "pressure": 1016,
+  "icon": "04d"
+}
+```
+
 ## Team Members
 
 - **Team Member 1**: [GitHub Username] - Backend Infrastructure & Terraform Modules
@@ -176,7 +231,7 @@ terraform apply
 ### Network Module (`modules/network/`)
 - Virtual network with specified IP ranges
 - Subnets for different environments
-- Network security groups
+- Network security groups with proper firewall rules
 
 ### AKS Module (`modules/aks/`)
 - Kubernetes cluster configuration
@@ -203,7 +258,21 @@ terraform apply
 
 Example request:
 ```bash
-curl "http://localhost:3000/api/weather?city=Toronto"
+curl "http://20.246.216.138/api/weather?city=Toronto"
+```
+
+Example response:
+```json
+{
+  "city": "Toronto",
+  "temperature": 32,
+  "condition": "Clouds",
+  "description": "broken clouds",
+  "humidity": 42,
+  "windSpeed": 5,
+  "pressure": 1016,
+  "icon": "04d"
+}
 ```
 
 ## Environment Variables
@@ -236,6 +305,7 @@ curl "http://localhost:3000/api/weather?city=Toronto"
 - **Purpose**: Local development and testing
 - **Resources**: Minimal for cost optimization
 - **Access**: Development team only
+- **Status**: ✅ Successfully deployed and accessible
 
 ### Test Environment
 - **Purpose**: Integration testing and validation
@@ -270,7 +340,19 @@ az login
 az account set --subscription "your-subscription-id"
 ```
 
-4. **GitHub Actions Failures**
+4. **AKS Connection Issues**
+```bash
+az aks get-credentials --resource-group <resource-group> --name <cluster-name>
+kubectl get nodes
+```
+
+5. **Network Security Group Issues**
+```bash
+az network nsg rule list --resource-group <resource-group> --nsg-name <nsg-name>
+az network nsg rule create --resource-group <resource-group> --nsg-name <nsg-name> --name allow-nodeport --priority 115 --direction Inbound --access Allow --protocol Tcp --source-port-range "*" --destination-port-range "32199" --source-address-prefix "*" --destination-address-prefix "*"
+```
+
+6. **GitHub Actions Failures**
 - Check workflow logs in GitHub Actions tab
 - Verify Azure credentials and permissions
 - Ensure all required secrets are configured
@@ -278,7 +360,7 @@ az account set --subscription "your-subscription-id"
 ## Security Considerations
 
 - All infrastructure changes go through pull request review
-- Network security groups restrict access
+- Network security groups restrict access with proper firewall rules
 - Azure managed identities for secure authentication
 - Secrets stored in GitHub repository secrets
 - Regular security scanning with tfsec

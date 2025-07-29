@@ -30,8 +30,7 @@ resource "azurerm_redis_cache" "main" {
   capacity             = var.redis_capacity
   family               = "C"
   sku_name             = var.redis_sku
-  non_ssl_port_enabled = false # Ensure SSL is enabled
-  enable_non_ssl_port  = false # Explicitly disable non-SSL port
+  non_ssl_port_enabled = false  # Ensure SSL is enabled
   tags                 = var.tags
 }
 
@@ -152,12 +151,12 @@ resource "kubernetes_deployment" "weather_app" {
 
           resources {
             limits = {
-              cpu    = "500m"
-              memory = "512Mi"
+              cpu    = "200m"
+              memory = "256Mi"
             }
             requests = {
-              cpu    = "250m"
-              memory = "256Mi"
+              cpu    = "100m"
+              memory = "128Mi"
             }
           }
 
