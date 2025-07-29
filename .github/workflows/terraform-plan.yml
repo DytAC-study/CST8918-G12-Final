@@ -33,14 +33,14 @@ jobs:
         with:
           tflint_version: v0.44.1
 
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
       - name: Terraform Init
         run: terraform init
         working-directory: environments/${{ matrix.environment }}
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
       - name: TFLint
         run: |
@@ -51,6 +51,11 @@ jobs:
       - name: Terraform Plan
         run: terraform plan -out=tfplan
         working-directory: environments/${{ matrix.environment }}
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
       - name: Upload Terraform Plan
         uses: actions/upload-artifact@v3
