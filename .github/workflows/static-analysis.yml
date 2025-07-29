@@ -40,8 +40,8 @@ jobs:
           for dir in environments/*/; do
             if [ -f "$dir/main.tf" ]; then
               echo "Validating $dir"
-              terraform init -backend=false $dir
-              terraform validate $dir
+              terraform init -backend=false -chdir="$dir"
+              terraform validate -chdir="$dir"
             fi
           done
 
