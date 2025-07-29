@@ -1,4 +1,3 @@
-# Updated workflow with CodeQL Action v3 - Force new run
 name: Static Analysis
 
 on:
