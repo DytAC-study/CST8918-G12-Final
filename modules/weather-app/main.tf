@@ -30,7 +30,7 @@ resource "azurerm_redis_cache" "main" {
   capacity             = var.redis_capacity
   family               = "C"
   sku_name             = var.redis_sku
-  non_ssl_port_enabled = false  # Ensure SSL is enabled
+  non_ssl_port_enabled = false # Ensure SSL is enabled
   tags                 = var.tags
 }
 
@@ -52,7 +52,7 @@ provider "kubernetes" {
 # Kubernetes Namespace
 resource "kubernetes_namespace" "weather_app" {
   depends_on = [azurerm_container_registry.main, azurerm_redis_cache.main]
-  
+
   metadata {
     name = "weather-app"
     labels = {
