@@ -1,0 +1,26 @@
+{
+  "name": "cst8918-weather-app",
+  "version": "1.0.0",
+  "description": "CST8918 Final Project Weather Application",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "weather",
+    "azure",
+    "kubernetes",
+    "terraform",
+    "cst8918"
+  ],
+  "author": "CST8918 Team",
+  "license": "MIT"
+}
