@@ -53,10 +53,10 @@ resource "azurerm_kubernetes_cluster" "main" {
 
   # API server authorized IP ranges - include current public IP
   api_server_authorized_ip_ranges = [
-    "10.0.0.0/8", 
-    "172.16.0.0/12", 
+    "10.0.0.0/8",
+    "172.16.0.0/12",
     "192.168.0.0/16",
-    "174.112.71.173/32"  # Current public IP
+    "174.112.71.173/32" # Current public IP
   ]
 
   network_profile {

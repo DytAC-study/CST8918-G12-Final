@@ -17,7 +17,7 @@ terraform {
 
 provider "azurerm" {
   features {}
-  
+
   # Use Service Principal authentication via environment variables
   # These will be set by GitHub Actions environment variables
 }
