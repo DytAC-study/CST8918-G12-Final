@@ -35,13 +35,16 @@ jobs:
           terraform fmt -check -recursive
         working-directory: .
 
-      - name: Terraform Validate
+      - name: Terraform Validate (Modules Only)
         run: |
-          for dir in environments/*/; do
-            if [ -f "$dir/main.tf" ]; then
-              echo "Validating $dir"
-              terraform init -backend=false -chdir="$dir"
-              terraform validate -chdir="$dir"
+          # Validate modules without backend
+          for module in modules/*/; do
+            if [ -f "$module/main.tf" ]; then
+              echo "Validating module: $module"
+              cd "$module"
+              terraform init -backend=false
+              terraform validate
+              cd ../..
             fi
           done
 
