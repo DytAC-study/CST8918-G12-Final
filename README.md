@@ -312,4 +312,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Test Comment**: Ready for pull request creation and workflow testing.
+**Test Comment**: Force trigger workflow for screenshot capture - final test.
