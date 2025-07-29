@@ -312,4 +312,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Test Comment**: This is a test comment to trigger GitHub Actions workflows for screenshot purposes.
+**Test Comment**: GitHub Secrets configured - testing workflow execution for screenshot capture.
