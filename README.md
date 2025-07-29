@@ -36,6 +36,13 @@ This is a weather application based on the Azure cloud platform, using Terraform
 - Configured proper NSG rule priorities (100-4096)
 - Verified all required ports (80, 443, 32199) are accessible
 
+#### 4. GitHub Actions Azure Authentication Issues
+**Problem**: OIDC federated identity authentication failing
+**Solution**:
+- Updated all workflows to use service principal authentication
+- Created comprehensive setup documentation in `docs/AZURE_SETUP.md`
+- Simplified authentication configuration for better reliability
+
 ### 🌐 Application Access
 
 **External URL**: http://20.246.216.138
