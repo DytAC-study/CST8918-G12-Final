@@ -43,8 +43,8 @@ resource "azurerm_kubernetes_cluster" "main" {
     type = "SystemAssigned"
   }
 
-  # RBAC is enabled by default in Azure Provider v3.0+
-  # No explicit configuration needed
+  # Enable RBAC explicitly
+  role_based_access_control_enabled = true
 
   # Enable logging with explicit configuration
   oms_agent {
