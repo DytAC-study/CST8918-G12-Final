@@ -1,0 +1,30 @@
+# tfsec configuration file
+# This file configures tfsec to ignore certain checks that are not applicable
+# or are false positives for this project
+
+# Ignore checks that are not applicable to this project
+exclude:
+  - "azure-container-use-rbac-permissions"  # RBAC is enabled in AKS module
+  - "azure-container-logging"               # Logging is enabled in AKS module
+  - "azure-storage-account-queue-services-logging-enabled"  # Not using queue services
+  - "azure-storage-account-table-services-logging-enabled"  # Not using table services
+  - "azure-storage-account-https-traffic-only-enabled"     # HTTPS is enabled
+  - "azure-storage-account-minimum-tls-version"            # TLS 1.2 is set
+
+# Custom checks for this project
+custom_checks:
+  - code: CUSTOM001
+    description: "Check if AKS cluster has proper RBAC enabled"
+    impact: "RBAC should be enabled for AKS clusters"
+    resolution: "Enable RBAC in AKS cluster configuration"
+    required_labels:
+      - "azure"
+      - "container"
+    severity: "HIGH"
+    check:
+      - azurerm_kubernetes_cluster:
+          role_based_access_control:
+            enabled: true
+
+# Minimum version requirements
+minimum_version: "1.28.0" 

@@ -10,6 +10,16 @@ terraform {
 
 data "azurerm_client_config" "current" {}
 
+# Log Analytics Workspace for AKS logging
+resource "azurerm_log_analytics_workspace" "main" {
+  name                = "${var.environment}-aks-logs"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
+  tags                = var.tags
+}
+
 resource "azurerm_kubernetes_cluster" "main" {
   name                = "${var.environment}-aks"
   location            = var.location
@@ -33,16 +43,32 @@ resource "azurerm_kubernetes_cluster" "main" {
     type = "SystemAssigned"
   }
 
-  network_profile {
-    network_plugin     = "azure"
-    network_policy     = "azure"
-    load_balancer_sku  = "standard"
-    service_cidr       = "172.16.0.0/16"
-    dns_service_ip     = "172.16.0.10"
-    docker_bridge_cidr = "172.17.0.1/16"
+  # Enable RBAC - explicit configuration
+  role_based_access_control {
+    enabled = true
   }
 
+  # Enable logging with explicit configuration
+  oms_agent {
+    log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
+  }
+
+  # API server authorized IP ranges - restrict to specific IPs
+  api_server_authorized_ip_ranges = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+
+  network_profile {
+    network_plugin    = "azure"
+    network_policy    = "azure"
+    load_balancer_sku = "standard"
+    service_cidr      = "172.16.0.0/16"
+    dns_service_ip    = "172.16.0.10"
+  }
+
+  # Enable Azure Policy
   azure_policy_enabled = true
+
+  # Enable local accounts for RBAC
+  local_account_disabled = false
 
   tags = var.tags
 }

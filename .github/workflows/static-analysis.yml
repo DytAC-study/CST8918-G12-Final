@@ -52,5 +52,12 @@ jobs:
 
       - name: tfsec Security Scan
         run: |
-          tfsec --format sarif --out tfsec.sarif || true
-        continue-on-error: true 
+          tfsec --format sarif --out tfsec.sarif --soft-fail
+        continue-on-error: true
+
+      - name: Upload tfsec results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: tfsec-results
+          path: tfsec.sarif 
