@@ -51,6 +51,8 @@ provider "kubernetes" {
 
 # Kubernetes Namespace
 resource "kubernetes_namespace" "weather_app" {
+  depends_on = [azurerm_container_registry.main, azurerm_redis_cache.main]
+  
   metadata {
     name = "weather-app"
     labels = {
