@@ -21,7 +21,18 @@ resource "azurerm_storage_account" "backend" {
   account_tier             = "Standard"
   account_replication_type = "LRS"
   min_tls_version          = "TLS1_2"
-  tags                     = var.tags
+
+  # Enable secure transfer
+  enable_https_traffic_only = true
+
+  # Enable blob encryption
+  blob_properties {
+    delete_retention_policy {
+      days = 7
+    }
+  }
+
+  tags = var.tags
 }
 
 resource "azurerm_storage_container" "backend" {

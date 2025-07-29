@@ -18,20 +18,21 @@ resource "azurerm_container_registry" "main" {
   resource_group_name = var.resource_group_name
   location            = var.location
   sku                 = "Basic"
-  admin_enabled       = true
+  admin_enabled       = false # Disable admin access for security
   tags                = var.tags
 }
 
 # Azure Cache for Redis
 resource "azurerm_redis_cache" "main" {
-  name                = "${var.environment}-redis-${random_string.suffix.result}"
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  capacity            = var.redis_capacity
-  family              = "C"
-  sku_name            = var.redis_sku
-  non_ssl_port_enabled = false
-  tags                = var.tags
+  name                 = "${var.environment}-redis-${random_string.suffix.result}"
+  location             = var.location
+  resource_group_name  = var.resource_group_name
+  capacity             = var.redis_capacity
+  family               = "C"
+  sku_name             = var.redis_sku
+  non_ssl_port_enabled = false # Ensure SSL is enabled
+  enable_non_ssl_port  = false # Explicitly disable non-SSL port
+  tags                 = var.tags
 }
 
 # Random string for unique naming
@@ -53,6 +54,10 @@ provider "kubernetes" {
 resource "kubernetes_namespace" "weather_app" {
   metadata {
     name = "weather-app"
+    labels = {
+      environment = var.environment
+      app         = "weather-app"
+    }
   }
 }
 
@@ -61,6 +66,9 @@ resource "kubernetes_secret" "redis_secret" {
   metadata {
     name      = "redis-secret"
     namespace = kubernetes_namespace.weather_app.metadata[0].name
+    labels = {
+      app = "weather-app"
+    }
   }
 
   data = {
@@ -68,6 +76,8 @@ resource "kubernetes_secret" "redis_secret" {
     redis-port = azurerm_redis_cache.main.ssl_port
     redis-key  = azurerm_redis_cache.main.primary_access_key
   }
+
+  type = "Opaque"
 }
 
 # Kubernetes ConfigMap for Application Configuration
@@ -75,12 +85,15 @@ resource "kubernetes_config_map" "weather_app_config" {
   metadata {
     name      = "weather-app-config"
     namespace = kubernetes_namespace.weather_app.metadata[0].name
+    labels = {
+      app = "weather-app"
+    }
   }
 
   data = {
     REDIS_HOST = azurerm_redis_cache.main.hostname
     REDIS_PORT = azurerm_redis_cache.main.ssl_port
-    REDIS_KEY  = azurerm_redis_cache.main.primary_access_key
+    NODE_ENV   = var.environment
   }
 }
 
@@ -89,6 +102,9 @@ resource "kubernetes_deployment" "weather_app" {
   metadata {
     name      = "weather-app"
     namespace = kubernetes_namespace.weather_app.metadata[0].name
+    labels = {
+      app = "weather-app"
+    }
   }
 
   spec {
@@ -108,6 +124,12 @@ resource "kubernetes_deployment" "weather_app" {
       }
 
       spec {
+        security_context {
+          run_as_non_root = true
+          run_as_user     = 1000
+          fs_group        = 1000
+        }
+
         container {
           image = "${azurerm_container_registry.main.login_server}/weather-app:latest"
           name  = "weather-app"
@@ -119,6 +141,12 @@ resource "kubernetes_deployment" "weather_app" {
           env_from {
             config_map_ref {
               name = kubernetes_config_map.weather_app_config.metadata[0].name
+            }
+          }
+
+          env_from {
+            secret_ref {
+              name = kubernetes_secret.redis_secret.metadata[0].name
             }
           }
 
@@ -140,6 +168,8 @@ resource "kubernetes_deployment" "weather_app" {
             }
             initial_delay_seconds = 30
             period_seconds        = 10
+            timeout_seconds       = 5
+            failure_threshold     = 3
           }
 
           readiness_probe {
@@ -149,6 +179,16 @@ resource "kubernetes_deployment" "weather_app" {
             }
             initial_delay_seconds = 5
             period_seconds        = 5
+            timeout_seconds       = 3
+            failure_threshold     = 3
+          }
+
+          security_context {
+            allow_privilege_escalation = false
+            read_only_root_filesystem  = true
+            capabilities {
+              drop = ["ALL"]
+            }
           }
         }
       }
@@ -161,6 +201,9 @@ resource "kubernetes_service" "weather_app" {
   metadata {
     name      = "weather-app-service"
     namespace = kubernetes_namespace.weather_app.metadata[0].name
+    labels = {
+      app = "weather-app"
+    }
   }
 
   spec {
@@ -171,6 +214,7 @@ resource "kubernetes_service" "weather_app" {
     port {
       port        = 80
       target_port = 3000
+      protocol    = "TCP"
     }
 
     type = "LoadBalancer"
