@@ -100,6 +100,21 @@ resource "azurerm_network_security_rule" "allow_ssh" {
   network_security_group_name = azurerm_network_security_group.main.name
 }
 
+# Additional rule for LoadBalancer health checks and external access
+resource "azurerm_network_security_rule" "allow_lb_health_check" {
+  name                        = "allow-lb-health-check"
+  priority                    = 105
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = "80"
+  source_address_prefix       = "AzureLoadBalancer"
+  destination_address_prefix  = "*"
+  resource_group_name         = azurerm_resource_group.network.name
+  network_security_group_name = azurerm_network_security_group.main.name
+}
+
 resource "azurerm_network_security_rule" "deny_all_inbound" {
   name                        = "deny-all-inbound"
   priority                    = 4096
