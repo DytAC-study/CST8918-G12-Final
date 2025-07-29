@@ -50,13 +50,13 @@ jobs:
           tflint --init
           tflint --recursive
 
-      - name: tfsec
+      - name: tfsec Security Scan
         run: |
-          tfsec --format sarif --out tfsec.sarif
+          tfsec --format sarif --out tfsec.sarif || true
         continue-on-error: true
 
       - name: Upload tfsec results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
-        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && hash tfsec.sarif 2>/dev/null
         with:
           sarif_file: tfsec.sarif 
