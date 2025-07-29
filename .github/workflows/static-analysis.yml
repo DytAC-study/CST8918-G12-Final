@@ -25,11 +25,6 @@ jobs:
         with:
           tflint_version: v0.44.1
 
-      - name: Setup tfsec
-        uses: aquasecurity/tfsec-action@v1.0.0
-        with:
-          working_directory: .
-
       - name: Terraform Format Check
         run: |
           terraform fmt -check -recursive
@@ -54,9 +49,11 @@ jobs:
           tflint --recursive
 
       - name: tfsec Security Scan
-        run: |
-          tfsec --format sarif --out tfsec.sarif --soft-fail
-        continue-on-error: true
+        uses: aquasecurity/tfsec-action@v1.0.0
+        with:
+          working_directory: .
+          format: sarif
+          soft_fail: true
 
       - name: Upload tfsec results
         uses: actions/upload-artifact@v4
