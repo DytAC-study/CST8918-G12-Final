@@ -14,34 +14,93 @@ This is a weather application based on the Azure cloud platform, using Terraform
 - **Weather Application**: Successfully deployed and accessible externally
 - **Load Balancer**: External IP `20.246.216.138` with proper health checks
 
-### 🔧 Recent Issues Resolved
+### 🔧 Major Challenges Encountered and Solutions
 
 #### 1. AKS Connection Timeout Issue
 **Problem**: Initial kubectl connection timeout to AKS cluster
+```
+Error: dial tcp 40.71.237.228:443: i/o timeout
+```
+**Root Cause**: API server not accessible from current public IP
 **Solution**: 
 - Updated API server authorized IP ranges to include current public IP `174.112.71.173/32`
 - Refreshed kubectl credentials using `az aks get-credentials`
+- Modified `modules/aks/main.tf` to include public IP in `api_server_authorized_ip_ranges`
 
 #### 2. Docker Image Pull Issues
-**Problem**: ImagePullBackOff errors due to missing Docker image and authentication
+**Problem**: ImagePullBackOff errors during pod creation
+```
+Error: 401 Unauthorized when pulling from ACR
+```
+**Root Cause**: Missing Docker image and ACR authentication issues
 **Solution**:
 - Built and pushed weather-app Docker image to ACR using multi-platform build
 - Attached ACR to AKS cluster for authentication
-- Reduced resource requests to fit node capacity
+- Reduced resource requests in `modules/weather-app/main.tf` to fit node capacity
+- Updated CPU/memory limits to prevent resource exhaustion
 
 #### 3. Firewall/Network Security Group Issues
 **Problem**: External access blocked by NSG rules
+```
+Error: Connection timeout when accessing LoadBalancer IP
+```
+**Root Cause**: Missing NSG rules for LoadBalancer NodePort
 **Solution**:
 - Added NodePort 32199 rule to allow LoadBalancer health checks
 - Configured proper NSG rule priorities (100-4096)
-- Verified all required ports (80, 443, 32199) are accessible
+- Added explicit NSG rules for ports 80, 443, 32199
+- Used Azure CLI to manually add rules when Terraform was locked
 
-#### 4. GitHub Actions Azure Authentication Issues
+#### 4. GitHub Actions Authentication Issues
 **Problem**: OIDC federated identity authentication failing
+```
+Error: AADSTS700213: No matching federated identity record found
+```
+**Root Cause**: OIDC configuration issues in Azure
 **Solution**:
-- Updated all workflows to use service principal authentication
-- Created comprehensive setup documentation in `docs/AZURE_SETUP.md`
+- Switched from OIDC to Service Principal authentication
+- Updated all GitHub Actions workflows to use `creds: ${{ secrets.AZURE_CREDENTIALS }}`
+- Created comprehensive setup documentation for Azure authentication
 - Simplified authentication configuration for better reliability
+
+#### 5. Terraform State Locking Issues
+**Problem**: State blob already locked during deployment
+```
+Error: Error acquiring the state lock
+Error message: state blob is already locked
+```
+**Root Cause**: Concurrent Terraform operations or interrupted deployments
+**Solution**:
+- Used Azure CLI to manually release state locks
+- Command: `az storage blob lease break --account-name cst8918tfstate2025 --container-name terraform-state --blob-name {env}/terraform.tfstate`
+- Released locks for dev, test, and prod environments
+- Implemented proper state management practices
+
+#### 6. Static Analysis Workflow Failures
+**Problem**: Multiple issues with static analysis workflow
+```
+Error: Too many command line arguments
+Error: Terraform exited with code 1
+```
+**Root Cause**: Backend authentication and command syntax issues
+**Solution**:
+- Changed validation approach to focus on modules only (`modules/*/`)
+- Removed Azure authentication dependency for static analysis
+- Fixed `-chdir` flag usage in Terraform commands
+- Added proper provider version constraints
+- Removed unused data sources to fix TFLint warnings
+
+#### 7. PowerShell Environment Issues
+**Problem**: Persistent PowerShell errors during automation
+```
+System.InvalidOperationException: Cannot locate the offset in the rendered text
+```
+**Root Cause**: PowerShell compatibility issues on macOS
+**Solution**:
+- Switched to manual step-by-step guidance when automation failed
+- Created shell scripts for complex operations
+- Used direct command execution where possible
+- Adapted workflow to handle PowerShell limitations
 
 ### 🌐 Application Access
 
@@ -97,10 +156,7 @@ CST8918-G12-Final/
 │   ├── package.json         # Dependency management
 │   └── Dockerfile           # Containerization configuration
 └── README.md                # Project documentation
-
-## Testing GitHub Actions Authentication Fix
-
-This section was added to test if the GitHub Actions authentication fix is working properly after updating the Azure login configuration to use service principal credentials.
+```
 
 ## Technology Stack
 
@@ -213,6 +269,7 @@ terraform apply
 1. **Static Analysis** (`static-analysis.yml`)
    - Runs on every push to any branch
    - Performs Terraform fmt, validate, and tfsec checks
+   - Validates modules only to avoid backend authentication issues
 
 2. **Terraform Planning** (`terraform-plan.yml`)
    - Runs on pull requests to main branch
@@ -247,11 +304,13 @@ terraform apply
 - Kubernetes cluster configuration
 - Node pool management
 - Network integration
+- API server authorized IP ranges
 
 ### Weather App Module (`modules/weather-app/`)
 - Azure Container Registry
 - Redis cache configuration
 - Kubernetes deployment and service
+- Resource limits and requests optimization
 
 ### Weather Application (`weather-app/`)
 - Express.js web server
@@ -327,45 +386,92 @@ Example response:
 - **Resources**: Auto-scaling AKS (1-3 nodes), Redis cache
 - **Access**: Production team only
 
-## Troubleshooting
+## Troubleshooting Guide
 
-### Common Issues
+### Common Issues and Solutions
 
-1. **Terraform State Conflicts**
+#### 1. Terraform State Conflicts
+**Symptoms**: State lock errors or concurrent modification issues
+**Solutions**:
 ```bash
+# Check current state
 terraform state list
 terraform refresh
+
+# Force unlock if necessary
+az storage blob lease break --account-name cst8918tfstate2025 --container-name terraform-state --blob-name {env}/terraform.tfstate
+
+# Reconfigure backend
 terraform init -reconfigure
 ```
 
-2. **Docker Build Failures**
+#### 2. Docker Build Failures
+**Symptoms**: Image build errors or ACR authentication issues
+**Solutions**:
 ```bash
+# Clean Docker cache
 docker system prune -a
+
+# Rebuild without cache
 docker build --no-cache -t weather-app .
+
+# Check ACR authentication
+az acr login --name cst8918acr
 ```
 
-3. **Azure Authentication Issues**
+#### 3. Azure Authentication Issues
+**Symptoms**: Authentication errors in GitHub Actions or local development
+**Solutions**:
 ```bash
+# Login to Azure
 az login
+
+# Set subscription
 az account set --subscription "your-subscription-id"
+
+# Create service principal for GitHub Actions
+az ad sp create-for-rbac --name "github-actions-terraform" --role contributor --scopes /subscriptions/YOUR_SUBSCRIPTION_ID
 ```
 
-4. **AKS Connection Issues**
+#### 4. AKS Connection Issues
+**Symptoms**: kubectl timeout or connection refused
+**Solutions**:
 ```bash
+# Get credentials
 az aks get-credentials --resource-group <resource-group> --name <cluster-name>
+
+# Check nodes
 kubectl get nodes
+
+# Update authorized IP ranges if needed
 ```
 
-5. **Network Security Group Issues**
+#### 5. Network Security Group Issues
+**Symptoms**: External access blocked or LoadBalancer not accessible
+**Solutions**:
 ```bash
+# Check NSG rules
 az network nsg rule list --resource-group <resource-group> --nsg-name <nsg-name>
+
+# Add NodePort rule manually if needed
 az network nsg rule create --resource-group <resource-group> --nsg-name <nsg-name> --name allow-nodeport --priority 115 --direction Inbound --access Allow --protocol Tcp --source-port-range "*" --destination-port-range "32199" --source-address-prefix "*" --destination-address-prefix "*"
 ```
 
-6. **GitHub Actions Failures**
+#### 6. GitHub Actions Failures
+**Symptoms**: Workflow failures or authentication errors
+**Solutions**:
 - Check workflow logs in GitHub Actions tab
 - Verify Azure credentials and permissions
 - Ensure all required secrets are configured
+- Check for state locking issues
+
+#### 7. Static Analysis Workflow Issues
+**Symptoms**: TFLint warnings or Terraform validation errors
+**Solutions**:
+- Ensure all providers have version constraints
+- Remove unused data sources and resources
+- Use `-backend=false` for static analysis
+- Validate modules instead of environments
 
 ## Security Considerations
 
@@ -374,6 +480,7 @@ az network nsg rule create --resource-group <resource-group> --nsg-name <nsg-nam
 - Azure managed identities for secure authentication
 - Secrets stored in GitHub repository secrets
 - Regular security scanning with tfsec
+- RBAC enabled on AKS clusters
 
 ## Cost Optimization
 
@@ -381,6 +488,23 @@ az network nsg rule create --resource-group <resource-group> --nsg-name <nsg-nam
 - Auto-scaling in production environment
 - Regular cleanup of unused resources
 - Monitoring and alerting for cost spikes
+- Resource limits and requests optimized
+
+## Lessons Learned
+
+### Technical Challenges
+1. **State Management**: Terraform state locking can cause deployment failures
+2. **Authentication Complexity**: OIDC vs Service Principal authentication trade-offs
+3. **Network Security**: NSG rules must be carefully configured for external access
+4. **Resource Optimization**: Proper CPU/memory limits prevent pod failures
+5. **CI/CD Reliability**: Static analysis should not depend on backend authentication
+
+### Best Practices Implemented
+1. **Modular Design**: Separated concerns into reusable Terraform modules
+2. **Environment Isolation**: Clear separation between dev, test, and prod
+3. **Security First**: Implemented proper network policies and RBAC
+4. **Documentation**: Comprehensive troubleshooting and setup guides
+5. **Automation**: Full CI/CD pipeline with quality gates
 
 ## License
 
@@ -398,10 +522,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **CST8918 Final Project - Group 12**  
 *Building a weather application with modern cloud-native technologies and DevOps practices*
 
-## GitHub Actions Workflow Screenshot
+## GitHub Actions Workflow Status
 
-*[Screenshot of completed GitHub Actions workflows will be added here after successful deployment]*
+✅ **Static Analysis**: Successfully running with module validation  
+✅ **Terraform Apply**: Automated deployment to all environments  
+✅ **Application Build**: Docker image build and push to ACR  
+✅ **Application Deployment**: Kubernetes deployment automation  
 
 ---
 
-**Test Comment**: Triggering workflow on main branch for screenshot capture.
+**Project Status**: ✅ **COMPLETED** - All lab requirements met with comprehensive problem-solving documentation
