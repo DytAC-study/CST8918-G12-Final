@@ -183,7 +183,7 @@ jobs:
           echo "Skipping resource group creation - using existing resource group"
           
           # Apply only the modules that don't create the resource group
-          terraform apply -auto-approve -lock=false -target=module.aks.azurerm_kubernetes_cluster.main -target=module.weather_app.azurerm_container_registry.main -target=module.weather_app.azurerm_redis_cache.main
+          terraform apply -auto-approve -lock=false -target=module.aks.azurerm_kubernetes_cluster.main
           
           echo "${{ matrix.environment }} environment deployed successfully!"
         env:
@@ -267,7 +267,7 @@ jobs:
           sed -i '/^  backend "azurerm" {/,/^  }/s/^/  # /' main.tf
           
           terraform init -backend=false
-          terraform plan -detailed-exitcode -target=module.aks.azurerm_kubernetes_cluster.main -target=module.weather_app.azurerm_container_registry.main -target=module.weather_app.azurerm_redis_cache.main
+          terraform plan -detailed-exitcode -target=module.aks.azurerm_kubernetes_cluster.main
           
           echo "Drift check completed for ${{ matrix.environment }} environment!"
         env:
