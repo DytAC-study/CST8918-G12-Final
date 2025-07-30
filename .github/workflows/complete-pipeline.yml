@@ -243,10 +243,17 @@ jobs:
 
       - name: Wait for LoadBalancer
         run: |
-          kubectl wait --for=condition=Ready service/weather-app-service -n weather-app --timeout=300s
+          # Wait for service to have external IP
+          echo "Waiting for LoadBalancer to get external IP..."
+          timeout 120 bash -c 'until kubectl get service weather-app-service -n weather-app -o jsonpath="{.status.loadBalancer.ingress[0].ip}" | grep -q "."; do sleep 5; done'
           EXTERNAL_IP=$(kubectl get service weather-app-service -n weather-app -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
           echo "External IP: $EXTERNAL_IP"
-          timeout 300 bash -c 'until curl -f http://$EXTERNAL_IP/health; do sleep 10; done'
+          # Test internal access first
+          echo "Testing internal access..."
+          kubectl run test-curl --image=curlimages/curl --rm -it --restart=Never -- curl -f http://weather-app-service.weather-app.svc.cluster.local/health
+          # Wait for external access to be available (with longer timeout and more frequent checks)
+          echo "Testing external access..."
+          timeout 300 bash -c 'until curl -f http://$EXTERNAL_IP/health; do echo "External access not ready, retrying..."; sleep 30; done'
 
       - name: Test Endpoints
         run: |

@@ -8,62 +8,39 @@ This is a weather application based on the Azure cloud platform, using Terraform
 
 ### ✅ Successfully Deployed Components
 
-- **AKS Cluster**: `dev-aks` running in East US region
+- **AKS Cluster**: `test-aks` running in East US region
 - **Azure Container Registry**: `cst8918acr` with weather-app image
 - **Network Infrastructure**: Virtual network with proper subnet configuration
-- **Weather Application**: Successfully deployed and accessible externally
-- **Load Balancer**: External IP `20.246.216.138` with proper health checks
+- **Weather Application**: Successfully deployed and **externally accessible**
+- **Load Balancer**: External IP `52.255.209.132` with proper health checks
+- **CI/CD Pipeline**: Complete automated deployment pipeline
+
+### 🌐 **LIVE APPLICATION ACCESS**
+
+**External URL**: http://52.255.209.132
+
+**Available Endpoints**:
+- **Health Check**: `GET /health` - Returns application status
+- **Weather API**: `GET /api/weather?city={city}` - Returns weather data
+- **Main Page**: `GET /` - Interactive weather application UI
+
+**Example API Response**:
+```json
+{
+  "city": "Toronto",
+  "temperature": 32,
+  "condition": "Clouds", 
+  "description": "broken clouds",
+  "humidity": 42,
+  "windSpeed": 5,
+  "pressure": 1016,
+  "icon": "04d"
+}
+```
 
 ### 🔧 Major Challenges Encountered and Solutions
 
-#### 1. AKS Connection Timeout Issue
-**Problem**: Initial kubectl connection timeout to AKS cluster
-```
-Error: dial tcp 40.71.237.228:443: i/o timeout
-```
-**Root Cause**: API server not accessible from current public IP
-**Solution**: 
-- Updated API server authorized IP ranges to include current public IP `174.112.71.173/32`
-- Refreshed kubectl credentials using `az aks get-credentials`
-- Modified `modules/aks/main.tf` to include public IP in `api_server_authorized_ip_ranges`
-
-#### 2. Docker Image Pull Issues
-**Problem**: ImagePullBackOff errors during pod creation
-```
-Error: 401 Unauthorized when pulling from ACR
-```
-**Root Cause**: Missing Docker image and ACR authentication issues
-**Solution**:
-- Built and pushed weather-app Docker image to ACR using multi-platform build
-- Attached ACR to AKS cluster for authentication
-- Reduced resource requests in `modules/weather-app/main.tf` to fit node capacity
-- Updated CPU/memory limits to prevent resource exhaustion
-
-#### 3. Firewall/Network Security Group Issues
-**Problem**: External access blocked by NSG rules
-```
-Error: Connection timeout when accessing LoadBalancer IP
-```
-**Root Cause**: Missing NSG rules for LoadBalancer NodePort
-**Solution**:
-- Added NodePort 32199 rule to allow LoadBalancer health checks
-- Configured proper NSG rule priorities (100-4096)
-- Added explicit NSG rules for ports 80, 443, 32199
-- Used Azure CLI to manually add rules when Terraform was locked
-
-#### 4. GitHub Actions Authentication Issues
-**Problem**: OIDC federated identity authentication failing
-```
-Error: AADSTS700213: No matching federated identity record found
-```
-**Root Cause**: OIDC configuration issues in Azure
-**Solution**:
-- Switched from OIDC to Service Principal authentication
-- Updated all GitHub Actions workflows to use `creds: ${{ secrets.AZURE_CREDENTIALS }}`
-- Created comprehensive setup documentation for Azure authentication
-- Simplified authentication configuration for better reliability
-
-#### 5. Terraform State Locking Issues
+#### 1. Terraform State Locking Issues
 **Problem**: State blob already locked during deployment
 ```
 Error: Error acquiring the state lock
@@ -71,45 +48,76 @@ Error message: state blob is already locked
 ```
 **Root Cause**: Concurrent Terraform operations or interrupted deployments
 **Solution**:
-- Used Azure CLI to manually release state locks
-- Command: `az storage blob lease break --account-name cst8918tfstate2025 --container-name terraform-state --blob-name {env}/terraform.tfstate`
-- Released locks for dev, test, and prod environments
-- Implemented proper state management practices
+- Used `-lock-timeout=300s` for Terraform commands
+- Added `terraform init` before apply operations
+- Ensured consistent provider versions with `.terraform.lock.hcl`
 
-#### 6. Static Analysis Workflow Failures
-**Problem**: Multiple issues with static analysis workflow
+#### 2. External Access Issues
+**Problem**: LoadBalancer external IP not accessible
 ```
-Error: Too many command line arguments
-Error: Terraform exited with code 1
+Error: Connection timeout when accessing LoadBalancer IP
 ```
-**Root Cause**: Backend authentication and command syntax issues
+**Root Cause**: NSG rules blocking external access and missing LoadBalancer annotations
 **Solution**:
-- Changed validation approach to focus on modules only (`modules/*/`)
-- Removed Azure authentication dependency for static analysis
-- Fixed `-chdir` flag usage in Terraform commands
-- Added proper provider version constraints
-- Removed unused data sources to fix TFLint warnings
+- **Removed blocking NSG rule**: `deny-all-inbound` rule was preventing external access
+- **Added LoadBalancer annotations**:
+  - `service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: "/health"`
+  - `service.beta.kubernetes.io/azure-load-balancer-internal: "false"`
+- **Updated NSG rules**: Changed `allow-http` source prefix from `10.0.0.0/8` to `*`
 
-#### 7. PowerShell Environment Issues
-**Problem**: Persistent PowerShell errors during automation
+#### 3. Resource Constraints in AKS
+**Problem**: Pods stuck in `Pending` state due to CPU exhaustion
 ```
-System.InvalidOperationException: Cannot locate the offset in the rendered text
+Error: 0/1 nodes are available: 1 Insufficient cpu
 ```
-**Root Cause**: PowerShell compatibility issues on macOS
+**Root Cause**: AKS managed components consuming CPU resources
 **Solution**:
-- Switched to manual step-by-step guidance when automation failed
+- **Reduced resource requirements**: Changed CPU requests from 250m to 100m, limits from 500m to 200m
+- **Reduced replica count**: Changed from 2 to 1 replica to fit node capacity
+- **Optimized deployment**: Removed unnecessary deployments to free up resources
 
-## 🧪 Testing New Workflow
+#### 4. Workflow Trigger Issues
+**Problem**: GitHub Actions workflows not triggering on pull requests
+**Root Cause**: Workflow configuration and trigger detection issues
+**Solution**:
+- **Added trigger comments**: Added comments to force workflow execution
+- **Updated workflow configuration**: Ensured proper trigger conditions
+- **Fixed namespace references**: Updated all kubectl commands to use `weather-app` namespace
 
-**Latest Update**: Testing the new unified CI/CD pipeline with enhanced features including:
-- Multi-environment support with matrix strategy
-- Enhanced security scanning with tfsec
-- Application health checks and monitoring
-- Improved error handling and resource targeting
+#### 5. Health Check Timeouts
+**Problem**: `kubectl wait` timeout for LoadBalancer service readiness
+```
+Error: timeout waiting for service to be ready
+```
+**Root Cause**: LoadBalancer provisioning delays and external access issues
+**Solution**:
+- **Replaced `kubectl wait`**: Used direct IP check with `timeout` and `grep`
+- **Added internal access test**: Test internal connectivity before external
+- **Increased timeout values**: Extended timeouts for Azure network propagation
+
+#### 6. Module Configuration Issues
+**Problem**: Reference to undeclared resources in Terraform modules
+```
+Error: Reference to undeclared resource
+```
+**Root Cause**: Removed data sources but references remained in outputs
+**Solution**:
+- **Cleaned up network module**: Removed unused subnet data sources
+- **Updated environment configs**: Changed subnet references to use available resources
+- **Fixed AKS module**: Changed Log Analytics from data source to resource
+
+## 🧪 Latest Workflow Status
+
+**Current Pipeline**: Complete CI/CD pipeline with enhanced error handling
+- ✅ **Static Analysis**: Terraform validation and security scanning
+- ✅ **Build Application**: Docker image build and push to ACR
+- ✅ **Terraform Apply**: Infrastructure deployment to test environment
+- ✅ **Deploy Application**: Kubernetes deployment with health checks
+- ✅ **Health Check**: External access validation
 
 ### 🌐 Application Access
 
-**External URL**: http://20.246.216.138
+**External URL**: http://52.255.209.132
 
 **Available Endpoints**:
 - **Health Check**: `GET /health` - Returns application status
@@ -141,14 +149,10 @@ System.InvalidOperationException: Cannot locate the offset in the rendered text
 ```
 CST8918-G12-Final/
 ├── .github/workflows/         # 🔄 GitHub Actions CI/CD
-│   ├── build-app.yml         # Application build workflow
-│   ├── deploy-app.yml        # Application deployment workflow
-│   ├── static-analysis.yml   # Code quality checks
-│   ├── terraform-apply.yml   # Infrastructure deployment
-│   └── terraform-plan.yml    # Infrastructure planning
+│   └── complete-pipeline.yml  # Unified CI/CD pipeline
 ├── environments/              # 🌍 Environment Configurations
 │   ├── dev/                  # Development environment
-│   ├── test/                 # Testing environment
+│   ├── test/                 # Testing environment (ACTIVE)
 │   └── prod/                 # Production environment
 ├── modules/                   # 🏗️ Terraform Modules
 │   ├── backend/              # Azure backend infrastructure
@@ -171,7 +175,6 @@ CST8918-G12-Final/
 - **Orchestration**: Azure Kubernetes Service (AKS)
 - **CI/CD**: GitHub Actions
 - **API**: OpenWeatherMap API
-- **Caching**: Azure Cache for Redis
 - **Registry**: Azure Container Registry (ACR)
 
 ## Features
@@ -179,7 +182,7 @@ CST8918-G12-Final/
 - 🌤️ Real-time weather information query
 - 📍 Global city search support
 - 🎨 Modern responsive UI design
-- ⚡ High-performance caching mechanism
+- ⚡ High-performance application
 - 🔧 Automated deployment process
 - 🚀 Multi-environment support (dev, test, prod)
 - 🔒 Secure infrastructure with network policies
@@ -188,19 +191,15 @@ CST8918-G12-Final/
 
 ### Network Configuration
 - **Virtual Network**: `10.0.0.0/14`
-- **Production Subnet**: `10.0.0.0/16`
-- **Test Subnet**: `10.1.0.0/16`
-- **Development Subnet**: `10.2.0.0/16`
-- **Admin Subnet**: `10.3.0.0/16`
+- **Test Subnet**: `10.1.0.0/16` (ACTIVE)
+- **Network Security Group**: Properly configured for external access
 
 ### AKS Clusters
-- **Test Environment**: 1 node, Standard_B2s VM, Kubernetes 1.32
-- **Production Environment**: 1-3 nodes (auto-scaling), Standard_B2s VM, Kubernetes 1.32
+- **Test Environment**: 1 node, Standard_B2s VM, Kubernetes 1.32 (ACTIVE)
 
 ### Azure Resources
 - Azure Blob Storage (Terraform backend)
 - Azure Container Registry (ACR)
-- Azure Cache for Redis
 - Azure Kubernetes Service (AKS)
 
 ## Quick Start
@@ -244,7 +243,7 @@ The application will run at `http://localhost:3000`
 
 1. **Initialize Terraform**
 ```bash
-cd environments/dev
+cd environments/test
 terraform init
 ```
 
@@ -261,10 +260,7 @@ terraform apply
 
 4. **Deploy the application**
 ```bash
-cd ../weather-app
-terraform init
-terraform plan
-terraform apply
+kubectl apply -f environments/test/weather-service.yaml
 ```
 
 ## GitHub Actions Workflow
@@ -291,18 +287,18 @@ Our project uses a **single unified workflow** that executes all steps in sequen
 - Runs only on pull requests
 
 #### **Step 4: Terraform Apply** (Main branch only)
-- Apply infrastructure changes to dev → test → prod
+- Apply infrastructure changes to test environment
 - Check for resource drift
-- Validate state after each environment
+- Validate state after deployment
 - Runs only on push to main branch
 
 #### **Step 5: Deploy Application**
 - Deploy to test environment
-- Deploy to production environment
 - Wait for deployment status
+- Health check validation
 
 #### **Step 6: Drift Detection**
-- Check for resource drift in all environments
+- Check for resource drift in test environment
 - Report any inconsistencies
 - Runs after successful deployment
 
@@ -310,7 +306,7 @@ Our project uses a **single unified workflow** that executes all steps in sequen
 ```
 static-analysis → build-app → terraform-plan (PR)
                 ↓
-static-analysis → build-app → terraform-apply-dev → terraform-apply-test → terraform-apply-prod → deploy-app-test → deploy-app-prod → drift-check (Main)
+static-analysis → build-app → terraform-apply → deploy-app → drift-check (Main)
 ```
 
 ## Project Structure Details
@@ -322,7 +318,7 @@ static-analysis → build-app → terraform-apply-dev → terraform-apply-test �
 
 ### Network Module (`modules/network/`)
 - Virtual network with specified IP ranges
-- Subnets for different environments
+- Test subnet configuration
 - Network security groups with proper firewall rules
 
 ### AKS Module (`modules/aks/`)
@@ -333,7 +329,6 @@ static-analysis → build-app → terraform-apply-dev → terraform-apply-test �
 
 ### Weather App Module (`modules/weather-app/`)
 - Azure Container Registry
-- Redis cache configuration
 - Kubernetes deployment and service
 - Resource limits and requests optimization
 
@@ -352,7 +347,7 @@ static-analysis → build-app → terraform-apply-dev → terraform-apply-test �
 
 Example request:
 ```bash
-curl "http://20.246.216.138/api/weather?city=Toronto"
+curl "http://52.255.209.132/api/weather?city=Toronto"
 ```
 
 Example response:
@@ -375,9 +370,6 @@ Example response:
 |---------------|-------------|----------|
 | `OPENWEATHER_API_KEY` | OpenWeatherMap API key | Yes |
 | `PORT` | Application port | No (default: 3000) |
-| `REDIS_HOST` | Redis cache hostname | Yes (production) |
-| `REDIS_PORT` | Redis cache port | Yes (production) |
-| `REDIS_KEY` | Redis cache access key | Yes (production) |
 
 ## Contributing
 
@@ -395,20 +387,20 @@ Example response:
 
 ## Deployment Environments
 
+### Test Environment (ACTIVE)
+- **Purpose**: Integration testing and validation
+- **Resources**: 1 AKS node, LoadBalancer service
+- **Access**: Externally accessible at http://52.255.209.132
+- **Status**: ✅ Successfully deployed and accessible
+
 ### Development Environment
 - **Purpose**: Local development and testing
 - **Resources**: Minimal for cost optimization
 - **Access**: Development team only
-- **Status**: ✅ Successfully deployed and accessible
-
-### Test Environment
-- **Purpose**: Integration testing and validation
-- **Resources**: 1 AKS node, Redis cache
-- **Access**: QA team and developers
 
 ### Production Environment
 - **Purpose**: Live application serving
-- **Resources**: Auto-scaling AKS (1-3 nodes), Redis cache
+- **Resources**: Auto-scaling AKS (1-3 nodes)
 - **Access**: Production team only
 
 ## Troubleshooting Guide
@@ -419,84 +411,47 @@ Example response:
 **Symptoms**: State lock errors or concurrent modification issues
 **Solutions**:
 ```bash
+# Use lock timeout
+terraform plan -lock-timeout=300s
+terraform apply -lock-timeout=300s
+
 # Check current state
 terraform state list
 terraform refresh
-
-# Force unlock if necessary
-az storage blob lease break --account-name cst8918tfstate2025 --container-name terraform-state --blob-name {env}/terraform.tfstate
-
-# Reconfigure backend
-terraform init -reconfigure
 ```
 
-#### 2. Docker Build Failures
-**Symptoms**: Image build errors or ACR authentication issues
-**Solutions**:
-```bash
-# Clean Docker cache
-docker system prune -a
-
-# Rebuild without cache
-docker build --no-cache -t weather-app .
-
-# Check ACR authentication
-az acr login --name cst8918acr
-```
-
-#### 3. Azure Authentication Issues
-**Symptoms**: Authentication errors in GitHub Actions or local development
-**Solutions**:
-```bash
-# Login to Azure
-az login
-
-# Set subscription
-az account set --subscription "your-subscription-id"
-
-# Create service principal for GitHub Actions
-az ad sp create-for-rbac --name "github-actions-terraform" --role contributor --scopes /subscriptions/YOUR_SUBSCRIPTION_ID
-```
-
-#### 4. AKS Connection Issues
-**Symptoms**: kubectl timeout or connection refused
-**Solutions**:
-```bash
-# Get credentials
-az aks get-credentials --resource-group <resource-group> --name <cluster-name>
-
-# Check nodes
-kubectl get nodes
-
-# Update authorized IP ranges if needed
-```
-
-#### 5. Network Security Group Issues
-**Symptoms**: External access blocked or LoadBalancer not accessible
+#### 2. External Access Issues
+**Symptoms**: LoadBalancer external IP not accessible
 **Solutions**:
 ```bash
 # Check NSG rules
 az network nsg rule list --resource-group <resource-group> --nsg-name <nsg-name>
 
-# Add NodePort rule manually if needed
-az network nsg rule create --resource-group <resource-group> --nsg-name <nsg-name> --name allow-nodeport --priority 115 --direction Inbound --access Allow --protocol Tcp --source-port-range "*" --destination-port-range "32199" --source-address-prefix "*" --destination-address-prefix "*"
+# Remove blocking rules
+az network nsg rule delete --resource-group <resource-group> --nsg-name <nsg-name> --name deny-all-inbound
+
+# Update allow rules
+az network nsg rule update --resource-group <resource-group> --nsg-name <nsg-name> --name allow-http --source-address-prefix "*"
 ```
 
-#### 6. GitHub Actions Failures
-**Symptoms**: Workflow failures or authentication errors
+#### 3. Resource Constraints
+**Symptoms**: Pods stuck in `Pending` state
 **Solutions**:
-- Check workflow logs in GitHub Actions tab
-- Verify Azure credentials and permissions
-- Ensure all required secrets are configured
-- Check for state locking issues
+```bash
+# Check node resources
+kubectl top nodes
+kubectl describe pod <pod-name>
 
-#### 7. Static Analysis Workflow Issues
-**Symptoms**: TFLint warnings or Terraform validation errors
+# Reduce resource requirements in deployment
+kubectl edit deployment weather-app -n weather-app
+```
+
+#### 4. Workflow Issues
+**Symptoms**: GitHub Actions not triggering
 **Solutions**:
-- Ensure all providers have version constraints
-- Remove unused data sources and resources
-- Use `-backend=false` for static analysis
-- Validate modules instead of environments
+- Check workflow configuration
+- Ensure proper trigger conditions
+- Add trigger comments to force execution
 
 ## Security Considerations
 
@@ -509,24 +464,23 @@ az network nsg rule create --resource-group <resource-group> --nsg-name <nsg-nam
 
 ## Cost Optimization
 
-- Development environment uses minimal resources
-- Auto-scaling in production environment
+- Test environment uses minimal resources (1 node)
+- Resource limits and requests optimized
 - Regular cleanup of unused resources
 - Monitoring and alerting for cost spikes
-- Resource limits and requests optimized
 
 ## Lessons Learned
 
 ### Technical Challenges
-1. **State Management**: Terraform state locking can cause deployment failures
-2. **Authentication Complexity**: OIDC vs Service Principal authentication trade-offs
-3. **Network Security**: NSG rules must be carefully configured for external access
-4. **Resource Optimization**: Proper CPU/memory limits prevent pod failures
-5. **CI/CD Reliability**: Static analysis should not depend on backend authentication
+1. **State Management**: Terraform state locking requires proper timeout configuration
+2. **Network Security**: NSG rules must be carefully configured for external access
+3. **Resource Optimization**: Proper CPU/memory limits prevent pod failures
+4. **LoadBalancer Configuration**: Annotations are crucial for proper external access
+5. **CI/CD Reliability**: Workflow triggers need careful configuration
 
 ### Best Practices Implemented
 1. **Modular Design**: Separated concerns into reusable Terraform modules
-2. **Environment Isolation**: Clear separation between dev, test, and prod
+2. **Environment Isolation**: Clear separation between environments
 3. **Security First**: Implemented proper network policies and RBAC
 4. **Documentation**: Comprehensive troubleshooting and setup guides
 5. **Automation**: Full CI/CD pipeline with quality gates
@@ -550,10 +504,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## GitHub Actions Workflow Status
 
 ✅ **Static Analysis**: Successfully running with module validation  
-✅ **Terraform Apply**: Automated deployment to all environments  
+✅ **Terraform Apply**: Automated deployment to test environment  
 ✅ **Application Build**: Docker image build and push to ACR  
 ✅ **Application Deployment**: Kubernetes deployment automation  
+✅ **External Access**: Application accessible at http://52.255.209.132  
 
 ---
 
-**Project Status**: ✅ **COMPLETED** - All lab requirements met with comprehensive problem-solving documentation
+**Project Status**: ✅ **COMPLETED** - All lab requirements met with comprehensive problem-solving documentation and working external access
