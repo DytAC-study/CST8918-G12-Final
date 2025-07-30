@@ -245,21 +245,27 @@ jobs:
         run: |
           # Wait for service to have external IP
           echo "Waiting for LoadBalancer to get external IP..."
-          timeout 120 bash -c 'until kubectl get service weather-app-service -n weather-app -o jsonpath="{.status.loadBalancer.ingress[0].ip}" | grep -q "."; do sleep 5; done'
+          timeout 180 bash -c 'until kubectl get service weather-app-service -n weather-app -o jsonpath="{.status.loadBalancer.ingress[0].ip}" | grep -q "."; do sleep 10; done'
           EXTERNAL_IP=$(kubectl get service weather-app-service -n weather-app -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
           echo "External IP: $EXTERNAL_IP"
+          
+          # Wait additional time for LoadBalancer to be fully configured
+          echo "Waiting for LoadBalancer to be fully configured..."
+          sleep 60
+          
           # Test internal access first
           echo "Testing internal access..."
           kubectl run test-curl --image=curlimages/curl --rm -it --restart=Never -- curl -f http://weather-app-service.weather-app.svc.cluster.local/health
+          
           # Wait for external access to be available (with longer timeout and more frequent checks)
           echo "Testing external access..."
-          timeout 300 bash -c 'until curl -f http://$EXTERNAL_IP/health; do echo "External access not ready, retrying..."; sleep 30; done'
+          timeout 600 bash -c 'until curl -f "http://$EXTERNAL_IP/health"; do echo "External access not ready, retrying..."; sleep 60; done'
 
       - name: Test Endpoints
         run: |
           EXTERNAL_IP=$(kubectl get service weather-app-service -n weather-app -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-          curl -f http://$EXTERNAL_IP/health
-          curl -f http://$EXTERNAL_IP/
+          curl -f "http://$EXTERNAL_IP/health"
+          curl -f "http://$EXTERNAL_IP/"
 
 # End of workflow file
 # Trigger: This comment is added to trigger the workflow

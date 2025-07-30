@@ -17,7 +17,7 @@ This is a weather application based on the Azure cloud platform, using Terraform
 
 ### 🌐 **LIVE APPLICATION ACCESS**
 
-**External URL**: http://52.255.209.132
+**External URL**: http://4.157.192.48
 
 **Available Endpoints**:
 - **Health Check**: `GET /health` - Returns application status
@@ -117,7 +117,7 @@ Error: Reference to undeclared resource
 
 ### 🌐 Application Access
 
-**External URL**: http://52.255.209.132
+**External URL**: http://4.157.192.48
 
 **Available Endpoints**:
 - **Health Check**: `GET /health` - Returns application status
@@ -347,7 +347,7 @@ static-analysis → build-app → terraform-apply → deploy-app → drift-check
 
 Example request:
 ```bash
-curl "http://52.255.209.132/api/weather?city=Toronto"
+curl "http://4.157.192.48/api/weather?city=Toronto"
 ```
 
 Example response:
@@ -390,7 +390,7 @@ Example response:
 ### Test Environment (ACTIVE)
 - **Purpose**: Integration testing and validation
 - **Resources**: 1 AKS node, LoadBalancer service
-- **Access**: Externally accessible at http://52.255.209.132
+- **Access**: Externally accessible at http://4.157.192.48
 - **Status**: ✅ Successfully deployed and accessible
 
 ### Development Environment
@@ -507,7 +507,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ✅ **Terraform Apply**: Automated deployment to test environment  
 ✅ **Application Build**: Docker image build and push to ACR  
 ✅ **Application Deployment**: Kubernetes deployment automation  
-✅ **External Access**: Application accessible at http://52.255.209.132  
+✅ **External Access**: Application accessible at http://4.157.192.48  
 
 ---
 
