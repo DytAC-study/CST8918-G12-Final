@@ -98,9 +98,14 @@ System.InvalidOperationException: Cannot locate the offset in the rendered text
 **Root Cause**: PowerShell compatibility issues on macOS
 **Solution**:
 - Switched to manual step-by-step guidance when automation failed
-- Created shell scripts for complex operations
-- Used direct command execution where possible
-- Adapted workflow to handle PowerShell limitations
+
+## 🧪 Testing New Workflow
+
+**Latest Update**: Testing the new unified CI/CD pipeline with enhanced features including:
+- Multi-environment support with matrix strategy
+- Enhanced security scanning with tfsec
+- Application health checks and monitoring
+- Improved error handling and resource targeting
 
 ### 🌐 Application Access
 
