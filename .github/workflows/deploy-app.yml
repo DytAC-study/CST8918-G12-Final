@@ -1,0 +1,36 @@
+name: Deploy Application
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-app:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Test Environment
+        run: |
+          echo "=== Deploying to Test Environment ==="
+          az aks get-credentials --resource-group cst8918-final-project-group-1 --name test-aks --overwrite-existing
+          kubectl apply -f environments/test/weather-service.yaml
+          kubectl rollout status deployment/weather-app -n default --timeout=180s
+          echo "Test deployment completed successfully!"
+
+      - name: Verify Deployment
+        run: |
+          echo "=== Verification ==="
+          kubectl get services -n default
+          kubectl get pods -n default
+          echo "Deployment verification completed!" 

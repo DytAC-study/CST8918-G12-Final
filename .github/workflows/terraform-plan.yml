@@ -1,0 +1,44 @@
+name: Terraform Plan
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  terraform-plan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Terraform Plan - Test Environment
+        run: |
+          echo "=== Planning Test Environment ==="
+          cd environments/test
+          
+          # Comment out backend configuration
+          sed -i '/^  backend "azurerm" {/,/^  }/s/^/  # /' main.tf
+          
+          terraform init -backend=false
+          terraform plan -out=tfplan -target=module.aks.azurerm_kubernetes_cluster.main -target=module.weather_app.azurerm_container_registry.main -target=module.weather_app.azurerm_redis_cache.main
+          
+          echo "Test environment plan completed!"
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }} 
