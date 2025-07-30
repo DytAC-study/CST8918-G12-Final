@@ -8,12 +8,6 @@ variable "environment" {
   type        = string
 }
 
-variable "vnet_address_space" {
-  description = "Virtual network address space"
-  type        = string
-  default     = "10.0.0.0/14"
-}
-
 variable "prod_subnet_address_space" {
   description = "Production subnet address space"
   type        = string
