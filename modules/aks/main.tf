@@ -1,74 +1,57 @@
 terraform {
-  required_version = ">= 1.0"
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 3.0"
+      version = ">=3.0.0"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = ">=2.0.0"
     }
   }
+
+  backend "azurerm" {}
 }
 
-# Use data source for existing Log Analytics Workspace
-data "azurerm_log_analytics_workspace" "main" {
-  name                = "${var.environment}-aks-logs"
+provider "azurerm" {
+  features {}
+}
+
+# ✅ 用 data 引用现有 VNet 和 Subnet，而不是资源
+data "azurerm_virtual_network" "test" {
+  name                = "test-vnet"
   resource_group_name = var.resource_group_name
+}
+
+data "azurerm_subnet" "test" {
+  name                 = "test-subnet"
+  virtual_network_name = data.azurerm_virtual_network.test.name
+  resource_group_name  = var.resource_group_name
 }
 
 resource "azurerm_kubernetes_cluster" "main" {
-  name                = "${var.environment}-aks"
+  name                = "test-aks"
   location            = var.location
   resource_group_name = var.resource_group_name
-  dns_prefix          = "${var.environment}-aks"
-  kubernetes_version  = var.kubernetes_version
+  dns_prefix          = "testaks"
 
   default_node_pool {
-    name                = "default"
-    node_count          = var.node_count
-    vm_size             = var.vm_size
-    os_disk_size_gb     = 30
-    type                = "VirtualMachineScaleSets"
-    enable_auto_scaling = var.enable_auto_scaling
-    min_count           = var.enable_auto_scaling ? var.min_count : null
-    max_count           = var.enable_auto_scaling ? var.max_count : null
-    vnet_subnet_id      = var.subnet_id
+    name       = "default"
+    node_count = 2
+    vm_size    = "Standard_DS2_v2"
+
+    # ✅ 绑定到 data.subnet，而不是 resource.subnet
+    vnet_subnet_id = data.azurerm_subnet.test.id
   }
 
   identity {
     type = "SystemAssigned"
   }
-
-  # Enable RBAC explicitly
-  role_based_access_control_enabled = true
-
-  # Enable logging with explicit configuration
-  oms_agent {
-    log_analytics_workspace_id = data.azurerm_log_analytics_workspace.main.id
-  }
-
-  # API server authorized IP ranges - allow all IPs for GitHub Actions
-  api_server_authorized_ip_ranges = [
-    "0.0.0.0/0" # Allow all IPs to fix GitHub Actions connection issues
-  ]
-
-  network_profile {
-    network_plugin    = "azure"
-    network_policy    = "azure"
-    load_balancer_sku = "standard"
-    service_cidr      = "172.16.0.0/16"
-    dns_service_ip    = "172.16.0.10"
-  }
-
-  # Enable Azure Policy
-  azure_policy_enabled = true
-
-  # Enable local accounts for RBAC
-  local_account_disabled = false
-
-  tags = var.tags
 }
 
-resource "azurerm_role_assignment" "aks_network_contributor" {
-  scope                = var.subnet_id
-  role_definition_name = "Network Contributor"
-  principal_id         = azurerm_kubernetes_cluster.main.identity[0].principal_id
-} 
+provider "kubernetes" {
+  host                   = azurerm_kubernetes_cluster.main.kube_config[0].host
+  client_certificate     = base64decode(azurerm_kubernetes_cluster.main.kube_config[0].client_certificate)
+  client_key             = base64decode(azurerm_kubernetes_cluster.main.kube_config[0].client_key)
+  cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.main.kube_config[0].cluster_ca_certificate)
+}

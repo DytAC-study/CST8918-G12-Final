@@ -110,9 +110,18 @@ jobs:
       - name: Terraform Init & Plan - ${{ matrix.environment }}
         run: |
           cd environments/${{ matrix.environment }}
-          terraform init -lock-timeout=300s
-          terraform force-unlock -force $(date +%s) || true
-          terraform plan -out=tfplan -lock-timeout=300s
+          terraform init
+          
+          # 自动检测并解锁锁文件
+          LOCK_ID=$(terraform plan -lock=false 2>&1 | grep "ID:" | awk '{print $2}')
+          if [ -n "$LOCK_ID" ]; then
+            echo "Found lock: $LOCK_ID, unlocking..."
+            terraform force-unlock -force $LOCK_ID
+          else
+            echo "No lock found."
+          fi
+          
+          terraform plan -out=tfplan -lock=false
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
@@ -153,9 +162,17 @@ jobs:
       - name: Terraform Apply - ${{ matrix.environment }}
         run: |
           cd environments/${{ matrix.environment }}
-          terraform init -lock-timeout=300s
-          terraform force-unlock -force $(date +%s) || true
-          terraform apply -auto-approve -lock-timeout=300s tfplan
+
+          # 自动检测并解锁锁文件
+          LOCK_ID=$(terraform plan -lock=false 2>&1 | grep "ID:" | awk '{print $2}')
+          if [ -n "$LOCK_ID" ]; then
+            echo "Found lock: $LOCK_ID, unlocking..."
+            terraform force-unlock -force $LOCK_ID
+          else
+            echo "No lock found."
+          fi
+
+          terraform apply -auto-approve -lock=false tfplan
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
@@ -213,9 +230,18 @@ jobs:
       - name: Check Drift - ${{ matrix.environment }}
         run: |
           cd environments/${{ matrix.environment }}
-          terraform init -lock-timeout=300s
-          terraform force-unlock -force $(date +%s) || true
-          terraform plan -detailed-exitcode -lock-timeout=300s
+          terraform init
+          
+          # 自动检测并解锁锁文件
+          LOCK_ID=$(terraform plan -lock=false 2>&1 | grep "ID:" | awk '{print $2}')
+          if [ -n "$LOCK_ID" ]; then
+            echo "Found lock: $LOCK_ID, unlocking..."
+            terraform force-unlock -force $LOCK_ID
+          else
+            echo "No lock found."
+          fi
+          
+          terraform plan -detailed-exitcode -lock=false
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
