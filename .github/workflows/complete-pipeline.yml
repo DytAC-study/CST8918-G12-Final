@@ -105,7 +105,7 @@ jobs:
           push: false
           tags: weather-app:latest
 
-  # Step 3: Infrastructure Planning & Application (Skip Refresh)
+  # Step 3: Infrastructure Planning & Application (Target Specific Resources)
   terraform-plan-and-apply:
     runs-on: ubuntu-latest
     needs: [static-analysis, build-app]
@@ -123,7 +123,7 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Dev Environment (Skip Refresh)
+      # Dev Environment (Target Specific Resources)
       - name: Deploy Dev Environment
         run: |
           echo "=== Deploying Dev Environment ==="
@@ -135,9 +135,9 @@ jobs:
           # Use local state to avoid Azure Storage issues
           terraform init -backend=false
           
-          # Skip refresh to avoid resource conflicts
-          terraform plan -out=tfplan -lock=false -refresh=false
-          terraform apply -auto-approve -lock=false -refresh=false
+          # Target specific resources to avoid resource group conflicts
+          terraform plan -out=tfplan -lock=false -target=module.aks -target=module.weather_app
+          terraform apply -auto-approve -lock=false -target=module.aks -target=module.weather_app
           echo "Dev environment deployed successfully!"
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -145,7 +145,7 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
-      # Test Environment (Skip Refresh)
+      # Test Environment (Target Specific Resources)
       - name: Deploy Test Environment
         run: |
           echo "=== Deploying Test Environment ==="
@@ -157,9 +157,9 @@ jobs:
           # Use local state to avoid Azure Storage issues
           terraform init -backend=false
           
-          # Skip refresh to avoid resource conflicts
-          terraform plan -out=tfplan -lock=false -refresh=false
-          terraform apply -auto-approve -lock=false -refresh=false
+          # Target specific resources to avoid resource group conflicts
+          terraform plan -out=tfplan -lock=false -target=module.aks -target=module.weather_app
+          terraform apply -auto-approve -lock=false -target=module.aks -target=module.weather_app
           echo "Test environment deployed successfully!"
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -167,7 +167,7 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
-      # Prod Environment (Skip Refresh)
+      # Prod Environment (Target Specific Resources)
       - name: Deploy Prod Environment
         run: |
           echo "=== Deploying Prod Environment ==="
@@ -179,9 +179,9 @@ jobs:
           # Use local state to avoid Azure Storage issues
           terraform init -backend=false
           
-          # Skip refresh to avoid resource conflicts
-          terraform plan -out=tfplan -lock=false -refresh=false
-          terraform apply -auto-approve -lock=false -refresh=false
+          # Target specific resources to avoid resource group conflicts
+          terraform plan -out=tfplan -lock=false -target=module.aks -target=module.weather_app
+          terraform apply -auto-approve -lock=false -target=module.aks -target=module.weather_app
           echo "Prod environment deployed successfully!"
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
