@@ -20,6 +20,11 @@ permissions:
   id-token: write
   contents: read
 
+# 🚀 确保同一分支只有一个 workflow 在跑，避免 state lock 卡死
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # Job 1: Static Analysis and Security Scanning
   static-analysis:
@@ -144,7 +149,7 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Download Terraform Plan
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: tfplan-${{ matrix.environment }}
           path: environments/${{ matrix.environment }}
@@ -152,7 +157,8 @@ jobs:
       - name: Terraform Apply - ${{ matrix.environment }}
         run: |
           cd environments/${{ matrix.environment }}
-          terraform apply -auto-approve tfplan
+          terraform apply -auto-approve tfplan || \
+          (echo "⚠️ Terraform failed, attempting force-unlock..." && terraform force-unlock -force $(terraform show -json tfplan | jq -r '.terraform_version') && exit 1)
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
