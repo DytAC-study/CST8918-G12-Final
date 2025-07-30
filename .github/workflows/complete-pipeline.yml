@@ -105,7 +105,7 @@ jobs:
           push: false
           tags: weather-app:latest
 
-  # Step 3: Infrastructure Planning & Application (with Blob Lease Release)
+  # Step 3: Infrastructure Planning & Application (Local State Mode)
   terraform-plan-and-apply:
     runs-on: ubuntu-latest
     needs: [static-analysis, build-app]
@@ -123,31 +123,14 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Release Azure Storage Blob leases
-      - name: Release Blob Leases
-        run: |
-          echo "=== Releasing Azure Storage Blob leases ==="
-          
-          # Release leases for all environments
-          for env in dev test prod; do
-            echo "Releasing blob lease for $env environment..."
-            az storage blob lease break \
-              --account-name cst8918tfstate2025 \
-              --container-name terraform-state \
-              --blob-name "$env/terraform.tfstate" \
-              --auth-mode login || echo "No lease to release for $env"
-          done
-          
-          echo "Blob leases released successfully!"
-
-      # Dev Environment
+      # Dev Environment (Local State)
       - name: Deploy Dev Environment
         run: |
           echo "=== Deploying Dev Environment ==="
           cd environments/dev
           
-          # Initialize and deploy without state locking
-          terraform init
+          # Use local state to avoid Azure Storage issues
+          terraform init -backend=false
           terraform plan -out=tfplan -lock=false
           terraform apply -auto-approve -lock=false
           echo "Dev environment deployed successfully!"
@@ -157,14 +140,14 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
-      # Test Environment
+      # Test Environment (Local State)
       - name: Deploy Test Environment
         run: |
           echo "=== Deploying Test Environment ==="
           cd environments/test
           
-          # Initialize and deploy without state locking
-          terraform init
+          # Use local state to avoid Azure Storage issues
+          terraform init -backend=false
           terraform plan -out=tfplan -lock=false
           terraform apply -auto-approve -lock=false
           echo "Test environment deployed successfully!"
@@ -174,14 +157,14 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
-      # Prod Environment
+      # Prod Environment (Local State)
       - name: Deploy Prod Environment
         run: |
           echo "=== Deploying Prod Environment ==="
           cd environments/prod
           
-          # Initialize and deploy without state locking
-          terraform init
+          # Use local state to avoid Azure Storage issues
+          terraform init -backend=false
           terraform plan -out=tfplan -lock=false
           terraform apply -auto-approve -lock=false
           echo "Prod environment deployed successfully!"
