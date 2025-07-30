@@ -49,12 +49,9 @@ resource "azurerm_kubernetes_cluster" "main" {
     log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
   }
 
-  # API server authorized IP ranges - include current public IP
+  # API server authorized IP ranges - allow all IPs for GitHub Actions
   api_server_authorized_ip_ranges = [
-    "10.0.0.0/8",
-    "172.16.0.0/12",
-    "192.168.0.0/16",
-    "174.112.71.173/32" # Current public IP
+    "0.0.0.0/0" # Allow all IPs to fix GitHub Actions connection issues
   ]
 
   network_profile {
