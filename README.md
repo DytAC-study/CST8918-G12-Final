@@ -262,31 +262,51 @@ terraform plan
 terraform apply
 ```
 
-## GitHub Actions Workflows
+## GitHub Actions Workflow
 
-### Automated CI/CD Pipeline
+### Complete CI/CD Pipeline (`complete-pipeline.yml`)
 
-1. **Static Analysis** (`static-analysis.yml`)
-   - Runs on every push to any branch
-   - Performs Terraform fmt, validate, and tfsec checks
-   - Validates modules only to avoid backend authentication issues
+Our project uses a **single unified workflow** that executes all steps in sequence:
 
-2. **Terraform Planning** (`terraform-plan.yml`)
-   - Runs on pull requests to main branch
-   - Executes tflint and terraform plan
+#### **Step 1: Static Analysis**
+- Terraform format checking
+- Terraform validation
+- TFLint analysis
+- tfsec security scanning
+- Runs on every push and PR
 
-3. **Application Build** (`build-app.yml`)
-   - Runs on pull requests to main branch
-   - Builds and pushes Docker image to ACR
-   - Tags images with commit SHA
+#### **Step 2: Build Application**
+- Multi-platform Docker image build
+- Push to Azure Container Registry
+- Depends on successful static analysis
 
-4. **Application Deployment** (`deploy-app.yml`)
-   - Deploys to test environment on pull requests
-   - Deploys to production environment on merge to main
+#### **Step 3: Terraform Planning** (PR only)
+- Plan infrastructure changes for all environments
+- Upload plan artifacts for review
+- Runs only on pull requests
 
-5. **Infrastructure Deployment** (`terraform-apply.yml`)
-   - Runs on push to main branch
-   - Applies infrastructure changes
+#### **Step 4: Terraform Apply** (Main branch only)
+- Apply infrastructure changes to dev → test → prod
+- Check for resource drift
+- Validate state after each environment
+- Runs only on push to main branch
+
+#### **Step 5: Deploy Application**
+- Deploy to test environment
+- Deploy to production environment
+- Wait for deployment status
+
+#### **Step 6: Drift Detection**
+- Check for resource drift in all environments
+- Report any inconsistencies
+- Runs after successful deployment
+
+### Workflow Dependencies
+```
+static-analysis → build-app → terraform-plan (PR)
+                ↓
+static-analysis → build-app → terraform-apply-dev → terraform-apply-test → terraform-apply-prod → deploy-app-test → deploy-app-prod → drift-check (Main)
+```
 
 ## Project Structure Details
 

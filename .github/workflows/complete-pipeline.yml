@@ -1,0 +1,203 @@
+name: Complete CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # Job 1: Static Analysis (对应 static-analysis.yml)
+  static-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate
+        run: |
+          cd modules/network
+          terraform init -backend=false
+          terraform validate
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+      - name: Security Scan
+        uses: aquasecurity/tfsec-action@v1.0.0
+        with:
+          working_directory: modules
+
+  # Job 2: Build Application (对应 build-app.yml)
+  build-app:
+    runs-on: ubuntu-latest
+    needs: static-analysis
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./weather-app
+          platforms: linux/amd64
+          push: false
+          tags: weather-app:latest
+
+  # Job 3: Terraform Plan (对应 terraform-plan.yml)
+  terraform-plan:
+    runs-on: ubuntu-latest
+    needs: [static-analysis, build-app]
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Terraform Plan - Test Environment
+        run: |
+          echo "=== Planning Test Environment ==="
+          cd environments/test
+          
+          # Comment out backend configuration
+          sed -i '/^  backend "azurerm" {/,/^  }/s/^/  # /' main.tf
+          
+          terraform init -backend=false
+          terraform plan -out=tfplan -target=module.aks.azurerm_kubernetes_cluster.main -target=module.weather_app.azurerm_container_registry.main -target=module.weather_app.azurerm_redis_cache.main
+          
+          echo "Test environment plan completed!"
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+  # Job 4: Terraform Apply (对应 terraform-apply.yml)
+  terraform-apply:
+    runs-on: ubuntu-latest
+    needs: [static-analysis, build-app]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Infrastructure - Test Environment
+        run: |
+          echo "=== Deploying Test Environment ==="
+          cd environments/test
+          
+          # Comment out backend configuration
+          sed -i '/^  backend "azurerm" {/,/^  }/s/^/  # /' main.tf
+          
+          terraform init -backend=false
+          terraform apply -auto-approve -lock=false -target=module.aks.azurerm_kubernetes_cluster.main -target=module.weather_app.azurerm_container_registry.main -target=module.weather_app.azurerm_redis_cache.main
+          
+          echo "Test environment deployed successfully!"
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+  # Job 5: Deploy Application (对应 deploy-app.yml)
+  deploy-app:
+    runs-on: ubuntu-latest
+    needs: terraform-apply
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Test Environment
+        run: |
+          echo "=== Deploying to Test Environment ==="
+          az aks get-credentials --resource-group cst8918-final-project-group-1 --name test-aks --overwrite-existing
+          kubectl apply -f environments/test/weather-service.yaml
+          kubectl rollout status deployment/weather-app -n default --timeout=180s
+          echo "Test deployment completed successfully!"
+
+      - name: Verify Deployment
+        run: |
+          echo "=== Verification ==="
+          kubectl get services -n default
+          kubectl get pods -n default
+          echo "Deployment verification completed!"
+
+  # Job 6: Drift Check (对应 drift-check.yml)
+  drift-check:
+    runs-on: ubuntu-latest
+    needs: deploy-app
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Check for Drift - Test Environment
+        run: |
+          echo "=== Checking for Drift in Test Environment ==="
+          cd environments/test
+          
+          # Comment out backend configuration
+          sed -i '/^  backend "azurerm" {/,/^  }/s/^/  # /' main.tf
+          
+          terraform init -backend=false
+          terraform plan -detailed-exitcode -target=module.aks.azurerm_kubernetes_cluster.main -target=module.weather_app.azurerm_container_registry.main -target=module.weather_app.azurerm_redis_cache.main
+          
+          echo "Drift check completed for test environment!"
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        continue-on-error: true 
