@@ -50,6 +50,11 @@ jobs:
           # Deploy to test environment only (for now)
           echo "Deploying to test environment..."
           cd environments/test
+          
+          # Comment out backend configuration to use local state
+          sed -i '/^  backend "azurerm" {/,/^  }/s/^/  # /' main.tf
+          
+          # Use local state to avoid Azure Storage issues
           terraform init -backend=false
           terraform apply -auto-approve -lock=false
           
