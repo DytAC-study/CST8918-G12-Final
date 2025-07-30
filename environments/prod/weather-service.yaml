@@ -15,12 +15,12 @@ spec:
     spec:
       containers:
       - name: weather-app
-        image: weather-app:latest
+        image: nginx:alpine
         ports:
-        - containerPort: 3000
+        - containerPort: 80
         env:
         - name: PORT
-          value: "3000"
+          value: "80"
         resources:
           requests:
             memory: "128Mi"
@@ -38,7 +38,7 @@ spec:
   type: LoadBalancer
   ports:
   - port: 80
-    targetPort: 3000
+    targetPort: 80
     protocol: TCP
   selector:
     app: weather-app 
