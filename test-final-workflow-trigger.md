@@ -1,4 +1,4 @@
-# Test Final Workflow Trigger
+# Test Final Workflow Trigger - Updated
 
 This file is created to trigger the CI/CD pipeline after all Terraform configuration fixes.
 
@@ -13,4 +13,7 @@ This file is created to trigger the CI/CD pipeline after all Terraform configura
 - Static analysis should pass
 - Build should succeed
 - Terraform plan should work without errors
-- Terraform apply should complete successfully 
+- Terraform apply should complete successfully
+
+## Update:
+Adding this update to ensure the workflow is triggered properly. 
