@@ -129,9 +129,8 @@ jobs:
           echo "=== Deploying Dev Environment ==="
           cd environments/dev
           
-          # Temporarily comment out backend configuration to force local state
-          sed -i 's/^  backend "azurerm" {/  # backend "azurerm" {/' main.tf
-          sed -i 's/^  }/  # }/' main.tf
+          # Temporarily comment out the entire backend block
+          sed -i '/^  backend "azurerm" {/,/^  }/s/^/  # /' main.tf
           
           # Use local state to avoid Azure Storage issues
           terraform init -backend=false
@@ -150,9 +149,8 @@ jobs:
           echo "=== Deploying Test Environment ==="
           cd environments/test
           
-          # Temporarily comment out backend configuration to force local state
-          sed -i 's/^  backend "azurerm" {/  # backend "azurerm" {/' main.tf
-          sed -i 's/^  }/  # }/' main.tf
+          # Temporarily comment out the entire backend block
+          sed -i '/^  backend "azurerm" {/,/^  }/s/^/  # /' main.tf
           
           # Use local state to avoid Azure Storage issues
           terraform init -backend=false
@@ -171,9 +169,8 @@ jobs:
           echo "=== Deploying Prod Environment ==="
           cd environments/prod
           
-          # Temporarily comment out backend configuration to force local state
-          sed -i 's/^  backend "azurerm" {/  # backend "azurerm" {/' main.tf
-          sed -i 's/^  }/  # }/' main.tf
+          # Temporarily comment out the entire backend block
+          sed -i '/^  backend "azurerm" {/,/^  }/s/^/  # /' main.tf
           
           # Use local state to avoid Azure Storage issues
           terraform init -backend=false
