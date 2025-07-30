@@ -15,22 +15,22 @@ output "virtual_network_id" {
 
 output "prod_subnet_id" {
   description = "ID of the production subnet"
-  value       = azurerm_subnet.prod.id
+  value       = data.azurerm_subnet.prod.id
 }
 
 output "test_subnet_id" {
   description = "ID of the test subnet"
-  value       = azurerm_subnet.test.id
+  value       = data.azurerm_subnet.test.id
 }
 
 output "dev_subnet_id" {
   description = "ID of the development subnet"
-  value       = azurerm_subnet.dev.id
+  value       = data.azurerm_subnet.dev.id
 }
 
 output "admin_subnet_id" {
   description = "ID of the admin subnet"
-  value       = azurerm_subnet.admin.id
+  value       = data.azurerm_subnet.admin.id
 }
 
 output "network_security_group_id" {
