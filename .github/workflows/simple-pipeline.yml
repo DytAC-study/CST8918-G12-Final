@@ -56,7 +56,9 @@ jobs:
           
           # Use local state to avoid Azure Storage issues
           terraform init -backend=false
-          terraform apply -auto-approve -lock=false
+          
+          # Target only AKS and weather-app modules to avoid resource group conflicts
+          terraform apply -auto-approve -lock=false -target=module.aks -target=module.weather_app
           
           echo "Test environment deployed successfully!"
 
