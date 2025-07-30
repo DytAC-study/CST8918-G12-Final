@@ -181,13 +181,13 @@ jobs:
             az aks get-credentials --resource-group cst8918-final-project-group-1 --name test-aks --overwrite-existing
           fi
           kubectl apply -f environments/${{ matrix.environment }}/weather-service.yaml
-          kubectl rollout status deployment/weather-app -n default --timeout=180s
+          kubectl rollout status deployment/weather-app -n weather-app --timeout=180s
 
       - name: Verify Deployment
         run: |
-          kubectl get services -n default
-          kubectl get pods -n default
-          kubectl get deployments -n default
+          kubectl get services -n weather-app
+          kubectl get pods -n weather-app
+          kubectl get deployments -n weather-app
 
   # Job 6: Drift Detection
   drift-check:
@@ -243,14 +243,14 @@ jobs:
 
       - name: Wait for LoadBalancer
         run: |
-          kubectl wait --for=condition=Ready service/weather-app-service -n default --timeout=300s
-          EXTERNAL_IP=$(kubectl get service weather-app-service -n default -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          kubectl wait --for=condition=Ready service/weather-app-service -n weather-app --timeout=300s
+          EXTERNAL_IP=$(kubectl get service weather-app-service -n weather-app -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
           echo "External IP: $EXTERNAL_IP"
           timeout 300 bash -c 'until curl -f http://$EXTERNAL_IP/health; do sleep 10; done'
 
       - name: Test Endpoints
         run: |
-          EXTERNAL_IP=$(kubectl get service weather-app-service -n default -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          EXTERNAL_IP=$(kubectl get service weather-app-service -n weather-app -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
           curl -f http://$EXTERNAL_IP/health
           curl -f http://$EXTERNAL_IP/
 
