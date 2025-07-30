@@ -253,13 +253,13 @@ jobs:
           kubectl run test-curl --image=curlimages/curl --rm -it --restart=Never -- curl -f http://weather-app-service.weather-app.svc.cluster.local/health
           # Wait for external access to be available (with longer timeout and more frequent checks)
           echo "Testing external access..."
-          timeout 300 bash -c 'until curl -f http://$EXTERNAL_IP/health; do echo "External access not ready, retrying..."; sleep 30; done'
+          timeout 300 bash -c 'until curl -f "http://$EXTERNAL_IP/health"; do echo "External access not ready, retrying..."; sleep 30; done'
 
       - name: Test Endpoints
         run: |
           EXTERNAL_IP=$(kubectl get service weather-app-service -n weather-app -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-          curl -f http://$EXTERNAL_IP/health
-          curl -f http://$EXTERNAL_IP/
+          curl -f "http://$EXTERNAL_IP/health"
+          curl -f "http://$EXTERNAL_IP/"
 
 # End of workflow file
 # Trigger: This comment is added to trigger the workflow
