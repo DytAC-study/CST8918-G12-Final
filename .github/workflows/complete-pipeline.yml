@@ -203,7 +203,6 @@ jobs:
   terraform-apply-dev:
     runs-on: ubuntu-latest
     needs: [static-analysis, build-app]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -234,7 +233,6 @@ jobs:
   terraform-apply-test:
     runs-on: ubuntu-latest
     needs: terraform-apply-dev
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -265,7 +263,6 @@ jobs:
   terraform-apply-prod:
     runs-on: ubuntu-latest
     needs: terraform-apply-test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -297,7 +294,6 @@ jobs:
   deploy-app-test:
     runs-on: ubuntu-latest
     needs: terraform-apply-test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -319,7 +315,6 @@ jobs:
   deploy-app-prod:
     runs-on: ubuntu-latest
     needs: [terraform-apply-prod, deploy-app-test]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
