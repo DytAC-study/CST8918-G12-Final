@@ -37,7 +37,6 @@ module "network" {
   source = "../../modules/network"
 
   resource_group_name = "cst8918-final-project-group-1"
-  location            = local.location
   environment         = local.environment
   tags                = local.tags
 }
