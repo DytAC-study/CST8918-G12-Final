@@ -95,7 +95,7 @@ jobs:
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     strategy:
       matrix:
-        environment: [test]
+        environment: [test]  # 可以加 prod
     steps:
       - uses: actions/checkout@v4
 
@@ -123,13 +123,6 @@ jobs:
         with:
           name: tfplan-${{ matrix.environment }}
           path: environments/${{ matrix.environment }}/tfplan
-
-      # ✅ Cleanup lock
-      - name: Force unlock state (plan)
-        if: always()
-        run: |
-          cd environments/${{ matrix.environment }}
-          terraform force-unlock -force 3b6395c0-56b4-6f7d-e6a5-248169a80dd9 || true
 
   # Job 4: Terraform Apply (only on main)
   terraform-apply:
@@ -165,13 +158,6 @@ jobs:
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-
-      # ✅ Cleanup lock
-      - name: Force unlock state (apply)
-        if: always()
-        run: |
-          cd environments/${{ matrix.environment }}
-          terraform force-unlock -force 3b6395c0-56b4-6f7d-e6a5-248169a80dd9 || true
 
   # Job 5: Deploy Application to Kubernetes
   deploy-app:
@@ -232,13 +218,6 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
         continue-on-error: true
-
-      # ✅ Cleanup lock
-      - name: Force unlock state (drift)
-        if: always()
-        run: |
-          cd environments/${{ matrix.environment }}
-          terraform force-unlock -force 3b6395c0-56b4-6f7d-e6a5-248169a80dd9 || true
 
   # Job 7: Health Check
   health-check:
