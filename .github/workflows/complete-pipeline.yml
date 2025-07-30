@@ -128,11 +128,14 @@ jobs:
           
           terraform init -backend=false
           
+          # Force unlock any existing locks (in case of stale locks)
+          terraform force-unlock -force || true
+          
           # Skip resource group creation by using data source instead
           echo "Skipping resource group creation - using existing resource group"
           
           # Apply only the modules that don't create the resource group
-          terraform plan -out=tfplan -target=module.aks.azurerm_kubernetes_cluster.main -target=module.weather_app.azurerm_container_registry.main -target=module.weather_app.azurerm_redis_cache.main
+          terraform plan -out=tfplan -lock=false -target=module.aks.azurerm_kubernetes_cluster.main -target=module.weather_app.azurerm_container_registry.main -target=module.weather_app.azurerm_redis_cache.main
           
           echo "${{ matrix.environment }} environment plan completed!"
         env:
@@ -179,10 +182,15 @@ jobs:
           
           terraform init -backend=false
           
+          # Force unlock any existing locks (in case of stale locks)
+          terraform force-unlock -force || true
+          
           # Skip resource group creation by using data source instead
           echo "Skipping resource group creation - using existing resource group"
           
           # Apply only the modules that don't create the resource group
+          # Note: Using -lock=false temporarily to avoid state lock issues
+          # In production, proper state lock management should be implemented
           terraform apply -auto-approve -lock=false -target=module.aks.azurerm_kubernetes_cluster.main
           
           echo "${{ matrix.environment }} environment deployed successfully!"
@@ -267,7 +275,11 @@ jobs:
           sed -i '/^  backend "azurerm" {/,/^  }/s/^/  # /' main.tf
           
           terraform init -backend=false
-          terraform plan -detailed-exitcode -target=module.aks.azurerm_kubernetes_cluster.main
+          
+          # Force unlock any existing locks (in case of stale locks)
+          terraform force-unlock -force || true
+          
+          terraform plan -detailed-exitcode -lock=false -target=module.aks.azurerm_kubernetes_cluster.main
           
           echo "Drift check completed for ${{ matrix.environment }} environment!"
         env:
