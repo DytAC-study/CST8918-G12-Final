@@ -89,6 +89,11 @@ jobs:
           sed -i '/^  backend "azurerm" {/,/^  }/s/^/  # /' main.tf
           
           terraform init -backend=false
+          
+          # Skip resource group creation by using data source instead
+          echo "Skipping resource group creation - using existing resource group"
+          
+          # Apply only the modules that don't create the resource group
           terraform plan -out=tfplan -target=module.aks.azurerm_kubernetes_cluster.main -target=module.weather_app.azurerm_container_registry.main -target=module.weather_app.azurerm_redis_cache.main
           
           echo "Test environment plan completed!"
@@ -126,6 +131,11 @@ jobs:
           sed -i '/^  backend "azurerm" {/,/^  }/s/^/  # /' main.tf
           
           terraform init -backend=false
+          
+          # Skip resource group creation by using data source instead
+          echo "Skipping resource group creation - using existing resource group"
+          
+          # Apply only the modules that don't create the resource group
           terraform apply -auto-approve -lock=false -target=module.aks.azurerm_kubernetes_cluster.main -target=module.weather_app.azurerm_container_registry.main -target=module.weather_app.azurerm_redis_cache.main
           
           echo "Test environment deployed successfully!"
