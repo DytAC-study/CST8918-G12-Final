@@ -56,7 +56,7 @@ resource "azurerm_network_security_rule" "allow_http" {
   protocol                    = "Tcp"
   source_port_range           = "*"
   destination_port_range      = "80"
-  source_address_prefix       = "10.0.0.0/8" # Restrict to internal network
+  source_address_prefix       = "*" # Allow external access
   destination_address_prefix  = "*"
   resource_group_name         = data.azurerm_resource_group.network.name
   network_security_group_name = azurerm_network_security_group.main.name
@@ -91,19 +91,7 @@ resource "azurerm_network_security_rule" "allow_lb_health_check" {
   network_security_group_name = azurerm_network_security_group.main.name
 }
 
-resource "azurerm_network_security_rule" "deny_all_inbound" {
-  name                        = "deny-all-inbound"
-  priority                    = 4096
-  direction                   = "Inbound"
-  access                      = "Deny"
-  protocol                    = "*"
-  source_port_range           = "*"
-  destination_port_range      = "*"
-  source_address_prefix       = "*"
-  destination_address_prefix  = "*"
-  resource_group_name         = data.azurerm_resource_group.network.name
-  network_security_group_name = azurerm_network_security_group.main.name
-}
+# Removed deny-all-inbound rule to allow external access
 
 resource "azurerm_subnet_network_security_group_association" "test" {
   subnet_id                 = data.azurerm_subnet.test.id
