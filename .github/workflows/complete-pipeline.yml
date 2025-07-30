@@ -253,3 +253,6 @@ jobs:
           EXTERNAL_IP=$(kubectl get service weather-app-service -n default -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
           curl -f http://$EXTERNAL_IP/health
           curl -f http://$EXTERNAL_IP/
+
+# End of workflow file
+# Trigger: This comment is added to trigger the workflow
