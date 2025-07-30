@@ -154,7 +154,6 @@ jobs:
         run: |
           cd environments/${{ matrix.environment }}
           terraform init -lock-timeout=300s
-          terraform force-unlock -force $(date +%s) || true
           terraform apply -auto-approve -lock-timeout=300s tfplan
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -214,7 +213,6 @@ jobs:
         run: |
           cd environments/${{ matrix.environment }}
           terraform init -lock-timeout=300s
-          terraform force-unlock -force $(date +%s) || true
           terraform plan -detailed-exitcode -lock-timeout=300s
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
