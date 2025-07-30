@@ -8,14 +8,10 @@ terraform {
   }
 }
 
-# Log Analytics Workspace for AKS logging
-resource "azurerm_log_analytics_workspace" "main" {
+# Use data source for existing Log Analytics Workspace
+data "azurerm_log_analytics_workspace" "main" {
   name                = "${var.environment}-aks-logs"
-  location            = var.location
   resource_group_name = var.resource_group_name
-  sku                 = "PerGB2018"
-  retention_in_days   = 30
-  tags                = var.tags
 }
 
 resource "azurerm_kubernetes_cluster" "main" {
@@ -46,7 +42,7 @@ resource "azurerm_kubernetes_cluster" "main" {
 
   # Enable logging with explicit configuration
   oms_agent {
-    log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
+    log_analytics_workspace_id = data.azurerm_log_analytics_workspace.main.id
   }
 
   # API server authorized IP ranges - allow all IPs for GitHub Actions
