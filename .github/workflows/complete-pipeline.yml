@@ -132,7 +132,7 @@ jobs:
           echo "Skipping resource group creation - using existing resource group"
           
           # Apply only the modules that don't create the resource group
-          terraform plan -out=tfplan -target=module.aks.azurerm_kubernetes_cluster.main -target=module.weather_app.azurerm_container_registry.main -target=module.weather_app.azurerm_redis_cache.main
+          terraform plan -out=tfplan -target=module.aks.azurerm_kubernetes_cluster.main -target=module.aks.azurerm_log_analytics_workspace.main -target=module.weather_app.azurerm_container_registry.main -target=module.weather_app.azurerm_redis_cache.main
           
           echo "${{ matrix.environment }} environment plan completed!"
         env:
@@ -183,7 +183,7 @@ jobs:
           echo "Skipping resource group creation - using existing resource group"
           
           # Apply only the modules that don't create the resource group
-          terraform apply -auto-approve -lock=false -target=module.aks.azurerm_kubernetes_cluster.main -target=module.weather_app.azurerm_container_registry.main -target=module.weather_app.azurerm_redis_cache.main
+          terraform apply -auto-approve -lock=false -target=module.aks.azurerm_kubernetes_cluster.main -target=module.aks.azurerm_log_analytics_workspace.main -target=module.weather_app.azurerm_container_registry.main -target=module.weather_app.azurerm_redis_cache.main
           
           echo "${{ matrix.environment }} environment deployed successfully!"
         env:
