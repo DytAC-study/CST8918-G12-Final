@@ -59,8 +59,10 @@ jobs:
           tflint --recursive
 
       - name: Security Scan with tfsec
-        run: |
-          tfsec --format sarif --out tfsec.sarif
+        uses: aquasecurity/tfsec-action@v1.0.0
+        with:
+          working_directory: .
+          format: sarif
         continue-on-error: true
 
       - name: Upload tfsec results to GitHub Security tab
