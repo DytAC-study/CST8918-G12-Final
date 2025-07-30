@@ -28,7 +28,8 @@ variable "redis_capacity" {
 variable "redis_sku" {
   description = "SKU of the Redis cache"
   type        = string
-  default     = "Basic"
+  default     = "Basic
+  "
 }
 
 variable "app_replicas" {
