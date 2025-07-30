@@ -13,39 +13,37 @@ data "azurerm_resource_group" "network" {
   name = var.resource_group_name
 }
 
-resource "azurerm_virtual_network" "main" {
+# Use data source for existing virtual network
+data "azurerm_virtual_network" "main" {
   name                = "${var.environment}-vnet"
   resource_group_name = data.azurerm_resource_group.network.name
-  location            = data.azurerm_resource_group.network.location
-  address_space       = [var.vnet_address_space]
-  tags                = var.tags
 }
 
 resource "azurerm_subnet" "prod" {
   name                 = "prod-subnet"
   resource_group_name  = data.azurerm_resource_group.network.name
-  virtual_network_name = azurerm_virtual_network.main.name
+  virtual_network_name = data.azurerm_virtual_network.main.name
   address_prefixes     = [var.prod_subnet_address_space]
 }
 
 resource "azurerm_subnet" "test" {
   name                 = "test-subnet"
   resource_group_name  = data.azurerm_resource_group.network.name
-  virtual_network_name = azurerm_virtual_network.main.name
+  virtual_network_name = data.azurerm_virtual_network.main.name
   address_prefixes     = [var.test_subnet_address_space]
 }
 
 resource "azurerm_subnet" "dev" {
   name                 = "dev-subnet"
   resource_group_name  = data.azurerm_resource_group.network.name
-  virtual_network_name = azurerm_virtual_network.main.name
+  virtual_network_name = data.azurerm_virtual_network.main.name
   address_prefixes     = [var.dev_subnet_address_space]
 }
 
 resource "azurerm_subnet" "admin" {
   name                 = "admin-subnet"
   resource_group_name  = data.azurerm_resource_group.network.name
-  virtual_network_name = azurerm_virtual_network.main.name
+  virtual_network_name = data.azurerm_virtual_network.main.name
   address_prefixes     = [var.admin_subnet_address_space]
 }
 
