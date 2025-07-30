@@ -48,7 +48,7 @@ module "aks" {
   resource_group_name = module.network.resource_group_name
   location            = local.location
   environment         = local.environment
-  subnet_id           = module.network.prod_subnet_id
+  subnet_id           = module.network.test_subnet_id
   node_count          = 1
   enable_auto_scaling = true
   min_count           = 1
