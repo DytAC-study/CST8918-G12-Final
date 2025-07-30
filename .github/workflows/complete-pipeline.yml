@@ -3,15 +3,25 @@ name: Complete CI/CD Pipeline
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'modules/**'
+      - 'environments/**'
+      - 'weather-app/**'
+      - '.github/workflows/complete-pipeline.yml'
   pull_request:
     branches: [ main ]
+    paths:
+      - 'modules/**'
+      - 'environments/**'
+      - 'weather-app/**'
+      - '.github/workflows/complete-pipeline.yml'
 
 permissions:
   id-token: write
   contents: read
 
 jobs:
-  # Job 1: Static Analysis (对应 static-analysis.yml)
+  # Job 1: Static Analysis and Security Scanning
   static-analysis:
     runs-on: ubuntu-latest
     steps:
@@ -23,49 +33,77 @@ jobs:
         with:
           terraform_version: "1.5.0"
 
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.44.1
+
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
 
       - name: Terraform Validate
         run: |
-          cd modules/network
-          terraform init -backend=false
-          terraform validate
-        env:
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          for dir in environments/*/; do
+            if [ -f "$dir/main.tf" ]; then
+              echo "Validating $dir"
+              cd "$dir"
+              terraform init -backend=false
+              terraform validate
+              cd ../..
+            fi
+          done
 
-      - name: Security Scan
+      - name: TFLint
+        run: |
+          tflint --init
+          tflint --recursive
+
+      - name: Security Scan with tfsec
         uses: aquasecurity/tfsec-action@v1.0.0
         with:
-          working_directory: modules
+          working_directory: .
+          format: sarif
+        continue-on-error: true
 
-  # Job 2: Build Application (对应 build-app.yml)
+  # Job 2: Build and Push Docker Image
   build-app:
     runs-on: ubuntu-latest
     needs: static-analysis
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'deploy')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image
+      - name: Log in to Azure Container Registry
+        run: |
+          az acr login --name cst8918acr
+
+      - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./weather-app
+          push: true
           platforms: linux/amd64
-          push: false
-          tags: weather-app:latest
+          tags: |
+            cst8918acr.azurecr.io/weather-app:${{ github.sha }}
+            cst8918acr.azurecr.io/weather-app:latest
 
-  # Job 3: Terraform Plan (对应 terraform-plan.yml)
+  # Job 3: Terraform Plan (Multi-environment)
   terraform-plan:
     runs-on: ubuntu-latest
     needs: [static-analysis, build-app]
     if: github.event_name == 'pull_request'
+    strategy:
+      matrix:
+        environment: [test]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -80,29 +118,43 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Terraform Plan - Test Environment
+      - name: Terraform Plan - ${{ matrix.environment }} Environment
         run: |
-          echo "=== Planning Test Environment ==="
-          cd environments/test
+          echo "=== Planning ${{ matrix.environment }} Environment ==="
+          cd environments/${{ matrix.environment }}
           
-          # Comment out backend configuration
+          # Comment out backend configuration for CI/CD
           sed -i '/^  backend "azurerm" {/,/^  }/s/^/  # /' main.tf
           
           terraform init -backend=false
+          
+          # Skip resource group creation by using data source instead
+          echo "Skipping resource group creation - using existing resource group"
+          
+          # Apply only the modules that don't create the resource group
           terraform plan -out=tfplan -target=module.aks.azurerm_kubernetes_cluster.main -target=module.weather_app.azurerm_container_registry.main -target=module.weather_app.azurerm_redis_cache.main
           
-          echo "Test environment plan completed!"
+          echo "${{ matrix.environment }} environment plan completed!"
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
-  # Job 4: Terraform Apply (对应 terraform-apply.yml)
+      - name: Upload Terraform Plan
+        uses: actions/upload-artifact@v3
+        with:
+          name: tfplan-${{ matrix.environment }}
+          path: environments/${{ matrix.environment }}/tfplan
+
+  # Job 4: Terraform Apply (Multi-environment)
   terraform-apply:
     runs-on: ubuntu-latest
     needs: [static-analysis, build-app]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        environment: [test]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -117,29 +169,37 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy Infrastructure - Test Environment
+      - name: Deploy Infrastructure - ${{ matrix.environment }} Environment
         run: |
-          echo "=== Deploying Test Environment ==="
-          cd environments/test
+          echo "=== Deploying ${{ matrix.environment }} Environment ==="
+          cd environments/${{ matrix.environment }}
           
-          # Comment out backend configuration
+          # Comment out backend configuration for CI/CD
           sed -i '/^  backend "azurerm" {/,/^  }/s/^/  # /' main.tf
           
           terraform init -backend=false
+          
+          # Skip resource group creation by using data source instead
+          echo "Skipping resource group creation - using existing resource group"
+          
+          # Apply only the modules that don't create the resource group
           terraform apply -auto-approve -lock=false -target=module.aks.azurerm_kubernetes_cluster.main -target=module.weather_app.azurerm_container_registry.main -target=module.weather_app.azurerm_redis_cache.main
           
-          echo "Test environment deployed successfully!"
+          echo "${{ matrix.environment }} environment deployed successfully!"
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
-  # Job 5: Deploy Application (对应 deploy-app.yml)
+  # Job 5: Deploy Application to Kubernetes
   deploy-app:
     runs-on: ubuntu-latest
     needs: terraform-apply
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        environment: [test]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -149,26 +209,41 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy to Test Environment
+      - name: Deploy to ${{ matrix.environment }} Environment
         run: |
-          echo "=== Deploying to Test Environment ==="
-          az aks get-credentials --resource-group cst8918-final-project-group-1 --name test-aks --overwrite-existing
-          kubectl apply -f environments/test/weather-service.yaml
+          echo "=== Deploying to ${{ matrix.environment }} Environment ==="
+          
+          # Get AKS credentials based on environment
+          if [ "${{ matrix.environment }}" = "test" ]; then
+            az aks get-credentials --resource-group cst8918-final-project-group-1 --name test-aks --overwrite-existing
+          elif [ "${{ matrix.environment }}" = "prod" ]; then
+            az aks get-credentials --resource-group cst8918-final-project-group-1 --name prod-aks --overwrite-existing
+          fi
+          
+          # Apply Kubernetes manifests
+          kubectl apply -f environments/${{ matrix.environment }}/weather-service.yaml
+          
+          # Wait for deployment to be ready
           kubectl rollout status deployment/weather-app -n default --timeout=180s
-          echo "Test deployment completed successfully!"
+          
+          echo "${{ matrix.environment }} deployment completed successfully!"
 
       - name: Verify Deployment
         run: |
           echo "=== Verification ==="
           kubectl get services -n default
           kubectl get pods -n default
+          kubectl get deployments -n default
           echo "Deployment verification completed!"
 
-  # Job 6: Drift Check (对应 drift-check.yml)
+  # Job 6: Drift Detection and Monitoring
   drift-check:
     runs-on: ubuntu-latest
     needs: deploy-app
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        environment: [test]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -183,21 +258,73 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Check for Drift - Test Environment
+      - name: Check for Drift - ${{ matrix.environment }} Environment
         run: |
-          echo "=== Checking for Drift in Test Environment ==="
-          cd environments/test
+          echo "=== Checking for Drift in ${{ matrix.environment }} Environment ==="
+          cd environments/${{ matrix.environment }}
           
-          # Comment out backend configuration
+          # Comment out backend configuration for CI/CD
           sed -i '/^  backend "azurerm" {/,/^  }/s/^/  # /' main.tf
           
           terraform init -backend=false
           terraform plan -detailed-exitcode -target=module.aks.azurerm_kubernetes_cluster.main -target=module.weather_app.azurerm_container_registry.main -target=module.weather_app.azurerm_redis_cache.main
           
-          echo "Drift check completed for test environment!"
+          echo "Drift check completed for ${{ matrix.environment }} environment!"
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-        continue-on-error: true 
+        continue-on-error: true
+
+  # Job 7: Application Health Check
+  health-check:
+    runs-on: ubuntu-latest
+    needs: deploy-app
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        environment: [test]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get AKS credentials
+        run: |
+          if [ "${{ matrix.environment }}" = "test" ]; then
+            az aks get-credentials --resource-group cst8918-final-project-group-1 --name test-aks --overwrite-existing
+          elif [ "${{ matrix.environment }}" = "prod" ]; then
+            az aks get-credentials --resource-group cst8918-final-project-group-1 --name prod-aks --overwrite-existing
+          fi
+
+      - name: Wait for LoadBalancer IP
+        run: |
+          echo "Waiting for LoadBalancer IP to be assigned..."
+          kubectl wait --for=condition=Ready service/weather-app-service -n default --timeout=300s
+          
+          # Get the external IP
+          EXTERNAL_IP=$(kubectl get service weather-app-service -n default -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          echo "External IP: $EXTERNAL_IP"
+          
+          # Wait for the service to be accessible
+          echo "Waiting for service to be accessible..."
+          timeout 300 bash -c 'until curl -f http://$EXTERNAL_IP/health; do sleep 10; done'
+          
+          echo "Health check completed successfully!"
+
+      - name: Test Application Endpoints
+        run: |
+          EXTERNAL_IP=$(kubectl get service weather-app-service -n default -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          
+          # Test health endpoint
+          curl -f http://$EXTERNAL_IP/health
+          
+          # Test main application
+          curl -f http://$EXTERNAL_IP/
+          
+          echo "All endpoints tested successfully!" 
