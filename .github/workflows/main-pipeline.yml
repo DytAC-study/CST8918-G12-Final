@@ -3,78 +3,71 @@ name: Main Pipeline
 on:
   pull_request:
     branches: [ main ]
-    paths:
-      - 'modules/**'
-      - 'environments/**'
-      - '.github/workflows/main-pipeline.yml'
 
 permissions:
-  id-token: write
   contents: read
 
 jobs:
+  # 1. 静态检查
   static-analysis:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@v4
         with:
           tflint_version: v0.44.1
-
-      - name: TFLint
+      - name: Run TFLint
         run: |
           tflint --init
           tflint --recursive
 
-  build-app:
-    runs-on: ubuntu-latest
+  # 2. 构建镜像并推送 ACR
+  build-and-push:
     needs: static-analysis
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Log in to Azure
+      - name: Azure Login
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
 
       - name: Log in to Azure Container Registry
-        run: az acr login --name ${{ secrets.AZURE_CONTAINER_REGISTRY }}
-
-      - name: Build and push Docker image
         run: |
-          IMAGE_NAME=${{ secrets.AZURE_CONTAINER_REGISTRY }}/weather-app:${{ github.sha }}
-          docker build -t $IMAGE_NAME .
-          docker push $IMAGE_NAME
-        env:
-          DOCKER_BUILDKIT: 1
+          az acr login --name ${{ secrets.ACR_NAME }}
 
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE_TAG=${{ github.sha }}
+          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/weather-app:$IMAGE_TAG .
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/weather-app:$IMAGE_TAG
+
+  # 3. Terraform Plan (按顺序执行 dev → test → prod)
   terraform-plan:
+    needs: build-and-push
     runs-on: ubuntu-latest
-    needs: build-app
     strategy:
+      max-parallel: 1
       matrix:
         environment: [dev, test, prod]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.5.0"
 
-      - name: Log in to Azure
+      - name: Azure Login
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
 
       - name: Terraform Init
         run: terraform init
@@ -83,72 +76,42 @@ jobs:
       - name: Terraform Plan
         run: terraform plan -out=tfplan
         working-directory: environments/${{ matrix.environment }}
-        env:
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
       - name: Upload Terraform Plan
-        uses: actions/upload-artifact@v4   # ✅ 已更新
+        uses: actions/upload-artifact@v4
         with:
           name: tfplan-${{ matrix.environment }}
           path: environments/${{ matrix.environment }}/tfplan
 
+  # 4. Terraform Apply (只在手动触发或者 main merge 后执行)
   terraform-apply:
-    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
     needs: terraform-plan
+    runs-on: ubuntu-latest
     strategy:
+      max-parallel: 1
       matrix:
         environment: [dev, test, prod]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.5.0"
 
-      - name: Log in to Azure
+      - name: Azure Login
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
 
       - name: Download Terraform Plan
-        uses: actions/download-artifact@v4   # ✅ 已更新
+        uses: actions/download-artifact@v4
         with:
           name: tfplan-${{ matrix.environment }}
           path: environments/${{ matrix.environment }}
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply tfplan
         working-directory: environments/${{ matrix.environment }}
-        env:
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-
-  deploy-app:
-    runs-on: ubuntu-latest
-    needs: terraform-apply
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Log in to Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Get AKS credentials
-        run: az aks get-credentials --resource-group cst8918-final-project-group-1 --name test-aks --overwrite-existing
-
-      - name: Deploy to AKS
-        run: |
-          kubectl set image deployment/weather-app weather-app=${{ secrets.AZURE_CONTAINER_REGISTRY }}/weather-app:${{ github.sha }} -n weather-app
