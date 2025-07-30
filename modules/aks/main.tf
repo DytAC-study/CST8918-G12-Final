@@ -46,7 +46,7 @@ resource "azurerm_kubernetes_cluster" "main" {
 
   # Enable logging with explicit configuration
   oms_agent {
-    log_analytics_workspace_id = data.azurerm_log_analytics_workspace.main.id
+    log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
   }
 
   # API server authorized IP ranges - allow all IPs for GitHub Actions
