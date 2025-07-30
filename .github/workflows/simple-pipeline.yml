@@ -1,0 +1,78 @@
+name: Simple CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # Step 1: Validate & Deploy
+  validate-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Simple validation
+      - name: Validate Terraform
+        run: |
+          echo "=== Validating Terraform ==="
+          terraform fmt -check -recursive
+          cd modules/network
+          terraform init -backend=false
+          terraform validate
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+      # Simple deployment
+      - name: Deploy Infrastructure
+        run: |
+          echo "=== Deploying Infrastructure ==="
+          
+          # Deploy to test environment only (for now)
+          echo "Deploying to test environment..."
+          cd environments/test
+          terraform init -backend=false
+          terraform apply -auto-approve -lock=false
+          
+          echo "Test environment deployed successfully!"
+
+      # Deploy application
+      - name: Deploy Application
+        run: |
+          echo "=== Deploying Application ==="
+          
+          # Get AKS credentials
+          az aks get-credentials --resource-group cst8918-final-project-group-1 --name test-aks --overwrite-existing
+          
+          # Deploy application
+          kubectl apply -f environments/test/weather-service.yaml
+          kubectl rollout status deployment/weather-app -n default --timeout=180s
+          
+          echo "Application deployed successfully!"
+
+      # Verify deployment
+      - name: Verify Deployment
+        run: |
+          echo "=== Verification ==="
+          kubectl get services -n default
+          kubectl get pods -n default
+          echo "Deployment verification completed!" 
