@@ -112,8 +112,8 @@ jobs:
           cd environments/${{ matrix.environment }}
           terraform init
           
-          # Note: Using -lock=false to avoid lock issues
-          terraform plan -out=tfplan -lock=false
+          # Note: Using -lock-timeout=300s to wait for locks instead of failing immediately
+          terraform plan -out=tfplan -lock-timeout=300s
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
@@ -158,8 +158,8 @@ jobs:
           # Initialize Terraform to download providers
           terraform init
           
-          # Note: Using -lock=false to avoid lock issues
-          terraform apply -auto-approve -lock=false tfplan
+          # Note: Using -lock-timeout=300s to wait for locks instead of failing immediately
+          terraform apply -auto-approve tfplan -lock-timeout=300s
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
@@ -219,8 +219,8 @@ jobs:
           cd environments/${{ matrix.environment }}
           terraform init
           
-          # Note: Using -lock=false to avoid lock issues
-          terraform plan -detailed-exitcode -lock=false
+          # Note: Using -lock-timeout=300s to wait for locks instead of failing immediately
+          terraform plan -detailed-exitcode -lock-timeout=300s
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
