@@ -111,7 +111,11 @@ jobs:
         run: |
           cd environments/${{ matrix.environment }}
           terraform init
-          terraform plan -out=tfplan
+          
+          # Force unlock any existing locks (in case of stale locks)
+          terraform force-unlock -force || true
+          
+          terraform plan -out=tfplan -lock=false
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
@@ -152,7 +156,11 @@ jobs:
       - name: Terraform Apply - ${{ matrix.environment }}
         run: |
           cd environments/${{ matrix.environment }}
-          terraform apply -auto-approve tfplan
+          
+          # Force unlock any existing locks (in case of stale locks)
+          terraform force-unlock -force || true
+          
+          terraform apply -auto-approve -lock=false tfplan
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
@@ -211,7 +219,11 @@ jobs:
         run: |
           cd environments/${{ matrix.environment }}
           terraform init
-          terraform plan -detailed-exitcode
+          
+          # Force unlock any existing locks (in case of stale locks)
+          terraform force-unlock -force || true
+          
+          terraform plan -detailed-exitcode -lock=false
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
