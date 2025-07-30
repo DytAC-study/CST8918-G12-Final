@@ -4,9 +4,9 @@
 
 ### 1. GitHub Repository & CI/CD
 - [ ] **GitHub Actions Dashboard**
-  - Show all workflows running successfully
-  - Static Analysis, Terraform Plan, Build, Deploy workflows
-  - Screenshot: `.github/workflows/` showing all workflow files
+  - Show unified workflow running successfully
+  - Complete CI/CD pipeline with all steps
+  - Screenshot: `.github/workflows/` showing single workflow file
 
 - [ ] **Pull Request Process**
   - PR creation and review process
@@ -98,19 +98,20 @@
   - Screenshot: Storage account showing terraform-state container
 
 ### 6. CI/CD Pipeline Evidence
-- [ ] **Workflow Runs**
-  - Successful workflow executions
-  - Build and deployment logs
-  - Screenshot: GitHub Actions runs page
+- [ ] **Unified Workflow Runs**
+  - Complete pipeline execution
+  - All steps running in sequence
+  - Screenshot: GitHub Actions complete-pipeline runs
 
 - [ ] **Static Analysis Results**
   - tfsec, tflint, terraform validate results
-  - Screenshot: Static analysis workflow output
+  - Screenshot: Static analysis step output
 
-- [ ] **Deployment Logs**
+- [ ] **Build and Deploy Logs**
+  - Docker build and push logs
   - Application deployment logs
   - Infrastructure deployment logs
-  - Screenshot: Deployment workflow output
+  - Screenshot: Build and deploy step outputs
 
 ### 7. Documentation
 - [ ] **README.md**
@@ -119,9 +120,9 @@
   - Screenshot: README page on GitHub
 
 - [ ] **Resource Drift Management**
-  - New drift detection workflow
+  - Drift detection step in unified workflow
   - Documentation in English
-  - Screenshot: New workflow file
+  - Screenshot: Drift detection step output
 
 ### 8. Security & Best Practices
 - [ ] **RBAC Configuration**
