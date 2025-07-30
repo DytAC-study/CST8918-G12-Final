@@ -3,12 +3,6 @@ variable "resource_group_name" {
   type        = string
 }
 
-variable "location" {
-  description = "Azure region for the resources"
-  type        = string
-  default     = "East US"
-}
-
 variable "environment" {
   description = "Environment name (dev, test, prod)"
   type        = string
