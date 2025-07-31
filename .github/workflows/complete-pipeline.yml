@@ -259,7 +259,7 @@ jobs:
           
           # Wait for external access to be available (with longer timeout and more frequent checks)
           echo "Testing external access..."
-          timeout 600 bash -c 'until curl -f "http://$EXTERNAL_IP/health"; do echo "External access not ready, retrying..."; sleep 60; done'
+          timeout 600 bash -c "until curl -f \"http://$EXTERNAL_IP/health\"; do echo \"External access not ready, retrying...\"; sleep 60; done"
 
       - name: Test Endpoints
         run: |
