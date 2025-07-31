@@ -15,18 +15,18 @@ This is a weather application based on the Azure cloud platform, using Terraform
 
 ```
 CST8918-G12-Final/
-├── .github/workflows/         # 🔄 GitHub Actions CI/CD
+├── .github/workflows/         # GitHub Actions CI/CD
 │   └── complete-pipeline.yml  # Unified CI/CD pipeline
-├── environments/              # 🌍 Environment Configurations
+├── environments/              # Environment Configurations
 │   ├── dev/                  # Development environment
 │   ├── test/                 # Testing environment (ACTIVE)
 │   └── prod/                 # Production environment
-├── modules/                   # 🏗️ Terraform Modules
+├── modules/                   # Terraform Modules
 │   ├── backend/              # Azure backend infrastructure
 │   ├── network/              # Network infrastructure
 │   ├── aks/                  # AKS cluster configuration
 │   └── weather-app/          # Weather application deployment
-├── weather-app/              # 🌤️ Node.js Weather Application
+├── weather-app/              # Node.js Weather Application
 │   ├── src/                  # Application source code
 │   ├── app.js               # Main application file
 │   ├── package.json         # Dependency management
@@ -34,9 +34,9 @@ CST8918-G12-Final/
 └── README.md                # Project documentation
 ```
 
-## 🚀 Current Deployment Status
+## Current Deployment Status
 
-### ✅ Successfully Deployed Components
+### Successfully Deployed Components
 
 - **AKS Cluster**: `test-aks` running in East US region
 - **Azure Container Registry**: `cst8918acr` with weather-app image
@@ -45,7 +45,7 @@ CST8918-G12-Final/
 - **Load Balancer**: External IP `52.255.209.132` with proper health checks
 - **CI/CD Pipeline**: Complete automated deployment pipeline
 
-### 🌐 **LIVE APPLICATION ACCESS**
+### **LIVE APPLICATION ACCESS**
 
 **External URL**: http://4.157.192.48
 
@@ -68,7 +68,7 @@ CST8918-G12-Final/
 }
 ```
 
-### 🔧 Major Challenges Encountered and Solutions
+### Major Challenges Encountered and Solutions
 
 #### 1. Terraform State Locking Issues
 **Problem**: State blob already locked during deployment
@@ -136,16 +136,16 @@ Error: Reference to undeclared resource
 - **Updated environment configs**: Changed subnet references to use available resources
 - **Fixed AKS module**: Changed Log Analytics from data source to resource
 
-## 🧪 Latest Workflow Status
+## Latest Workflow Status
 
 **Current Pipeline**: Complete CI/CD pipeline with enhanced error handling
-- ✅ **Static Analysis**: Terraform validation and security scanning
-- ✅ **Build Application**: Docker image build and push to ACR
-- ✅ **Terraform Apply**: Infrastructure deployment to test environment
-- ✅ **Deploy Application**: Kubernetes deployment with health checks
-- ✅ **Health Check**: External access validation
+- **Static Analysis**: Terraform validation and security scanning
+- **Build Application**: Docker image build and push to ACR
+- **Terraform Apply**: Infrastructure deployment to test environment
+- **Deploy Application**: Kubernetes deployment with health checks
+- **Health Check**: External access validation
 
-### 🌐 Application Access
+### Application Access
 
 **External URL**: http://4.157.192.48
 
@@ -184,13 +184,13 @@ Error: Reference to undeclared resource
 
 ## Features
 
-- 🌤️ Real-time weather information query
-- 📍 Global city search support
-- 🎨 Modern responsive UI design
-- ⚡ High-performance application
-- 🔧 Automated deployment process
-- 🚀 Multi-environment support (dev, test, prod)
-- 🔒 Secure infrastructure with network policies
+- Real-time weather information query
+- Global city search support
+- Modern responsive UI design
+- High-performance application
+- Automated deployment process
+- Multi-environment support (dev, test, prod)
+- Secure infrastructure with network policies
 
 ## Infrastructure Requirements
 
@@ -396,7 +396,7 @@ Example response:
 - **Purpose**: Integration testing and validation
 - **Resources**: 1 AKS node, LoadBalancer service
 - **Access**: Externally accessible at http://4.157.192.48
-- **Status**: ✅ Successfully deployed and accessible
+- **Status**: Successfully deployed and accessible
 
 ### Development Environment
 - **Purpose**: Local development and testing
@@ -508,11 +508,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## GitHub Actions Workflow Status
 
-✅ **Static Analysis**: Successfully running with module validation  
-✅ **Terraform Apply**: Automated deployment to test environment  
-✅ **Application Build**: Docker image build and push to ACR  
-✅ **Application Deployment**: Kubernetes deployment automation  
-✅ **External Access**: Application accessible at http://4.157.192.48  
+**Static Analysis**: Successfully running with module validation  
+**Terraform Apply**: Automated deployment to test environment  
+**Application Build**: Docker image build and push to ACR  
+**Application Deployment**: Kubernetes deployment automation  
+**External Access**: Application accessible at http://4.157.192.48  
 
 ---
 
@@ -520,6 +520,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 Complete GitHub Actions Workflow
 <img width="1892" height="626" alt="image" src="https://github.com/user-attachments/assets/daf04480-be7a-4de5-bc29-a1c5561911da" />
 
-
-
-**Project Status**: ✅ **COMPLETED** - All lab requirements met with comprehensive problem-solving documentation and working external access
