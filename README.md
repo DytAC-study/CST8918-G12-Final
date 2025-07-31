@@ -4,6 +4,36 @@
 
 This is a weather application based on the Azure cloud platform, using Terraform for Infrastructure as Code (IaC) management. The project adopts a microservices architecture, including a frontend weather application and backend infrastructure modules. This project demonstrates DevOps practices with automated CI/CD pipelines using GitHub Actions.
 
+## Team Members
+
+- **Team Member 1**: Yutian Du [DytAC](https://github.com/DytAC-study) - Backend Infrastructure & Terraform Modules
+- **Team Member 2**: Cong Zhao [zhao0294](https://github.com/zhao0294) - Application Deployment & Kubernetes Configuration  
+- **Team Member 3**: Jianyi Fan [JianyiF](https://github.com/JianyiF), [nealfan01](https://github.com/nealfan01) - Frontend Development & Documentation
+                      (both account are used to commit, nealfan01 are used locally when commit)
+
+## Project Architecture
+
+```
+CST8918-G12-Final/
+├── .github/workflows/         # 🔄 GitHub Actions CI/CD
+│   └── complete-pipeline.yml  # Unified CI/CD pipeline
+├── environments/              # 🌍 Environment Configurations
+│   ├── dev/                  # Development environment
+│   ├── test/                 # Testing environment (ACTIVE)
+│   └── prod/                 # Production environment
+├── modules/                   # 🏗️ Terraform Modules
+│   ├── backend/              # Azure backend infrastructure
+│   ├── network/              # Network infrastructure
+│   ├── aks/                  # AKS cluster configuration
+│   └── weather-app/          # Weather application deployment
+├── weather-app/              # 🌤️ Node.js Weather Application
+│   ├── src/                  # Application source code
+│   ├── app.js               # Main application file
+│   ├── package.json         # Dependency management
+│   └── Dockerfile           # Containerization configuration
+└── README.md                # Project documentation
+```
+
 ## 🚀 Current Deployment Status
 
 ### ✅ Successfully Deployed Components
@@ -140,34 +170,7 @@ Error: Reference to undeclared resource
 }
 ```
 
-## Team Members
 
-- **Team Member 1**: [Yutian Du](https://github.com/DytAC-study) - Backend Infrastructure & Terraform Modules
-- **Team Member 2**: [Cong Zhao](https://github.com/zhao0294) - Application Deployment & Kubernetes Configuration  
-- **Team Member 3**: [Jianyi Fan](https://github.com/JianyiF) - Frontend Development & Documentation
-
-## Project Architecture
-
-```
-CST8918-G12-Final/
-├── .github/workflows/         # 🔄 GitHub Actions CI/CD
-│   └── complete-pipeline.yml  # Unified CI/CD pipeline
-├── environments/              # 🌍 Environment Configurations
-│   ├── dev/                  # Development environment
-│   ├── test/                 # Testing environment (ACTIVE)
-│   └── prod/                 # Production environment
-├── modules/                   # 🏗️ Terraform Modules
-│   ├── backend/              # Azure backend infrastructure
-│   ├── network/              # Network infrastructure
-│   ├── aks/                  # AKS cluster configuration
-│   └── weather-app/          # Weather application deployment
-├── weather-app/              # 🌤️ Node.js Weather Application
-│   ├── src/                  # Application source code
-│   ├── app.js               # Main application file
-│   ├── package.json         # Dependency management
-│   └── Dockerfile           # Containerization configuration
-└── README.md                # Project documentation
-```
 
 ## Technology Stack
 
