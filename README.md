@@ -18,20 +18,20 @@ CST8918-G12-Final/
 ├── .github/workflows/         # GitHub Actions CI/CD
 │   └── complete-pipeline.yml  # Unified CI/CD pipeline
 ├── environments/              # Environment Configurations
-│   ├── dev/                  # Development environment
-│   ├── test/                 # Testing environment (ACTIVE)
-│   └── prod/                 # Production environment
+│   ├── dev/                   # Development environment
+│   ├── test/                  # Testing environment (ACTIVE)
+│   └── prod/                  # Production environment
 ├── modules/                   # Terraform Modules
-│   ├── backend/              # Azure backend infrastructure
-│   ├── network/              # Network infrastructure
-│   ├── aks/                  # AKS cluster configuration
-│   └── weather-app/          # Weather application deployment
-├── weather-app/              # Node.js Weather Application
-│   ├── src/                  # Application source code
-│   ├── app.js               # Main application file
-│   ├── package.json         # Dependency management
-│   └── Dockerfile           # Containerization configuration
-└── README.md                # Project documentation
+│   ├── backend/               # Azure backend infrastructure
+│   ├── network/               # Network infrastructure
+│   ├── aks/                   # AKS cluster configuration
+│   └── weather-app/           # Weather application deployment
+├── weather-app/               # Node.js Weather Application
+│   ├── src/                   # Application source code
+│   ├── app.js                 # Main application file
+│   ├── package.json           # Dependency management
+│   └── Dockerfile             # Containerization configuration
+└── README.md                  # Project documentation
 ```
 
 ## Current Deployment Status
