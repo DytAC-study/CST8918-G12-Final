@@ -511,4 +511,19 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
+## GitHub Actions Workflow Screenshot
+Complete GitHub Actions Workflow
+<img width="1892" height="626" alt="image" src="https://github.com/user-attachments/assets/daf04480-be7a-4de5-bc29-a1c5561911da" />
+static-analysis
+<img width="1897" height="901" alt="image" src="https://github.com/user-attachments/assets/80227ecb-9d47-4aa9-ae2e-cf7c9d75f2ef" />
+<img width="1867" height="906" alt="image" src="https://github.com/user-attachments/assets/9dd6380f-fc57-4f40-8789-1e9c12bb868f" />
+<img width="1892" height="907" alt="image" src="https://github.com/user-attachments/assets/6da1b407-18ef-4bc0-a44b-4c1f1a5de4b5" />
+<img width="1880" height="912" alt="image" src="https://github.com/user-attachments/assets/c09fa252-d2d9-47ec-a754-2b8ecc5eb11f" />
+<img width="1885" height="911" alt="image" src="https://github.com/user-attachments/assets/455291a1-b047-40da-8ae2-15b6947d928c" />
+<img width="1888" height="914" alt="image" src="https://github.com/user-attachments/assets/7c99a8dc-4a87-4cb1-8dde-b42955e68bcb" />
+<img width="1879" height="906" alt="image" src="https://github.com/user-attachments/assets/02cd389c-3e06-4127-ad1d-719e50361b58" />
+<img width="1880" height="912" alt="image" src="https://github.com/user-attachments/assets/74b19ddb-5bdc-402a-a5c0-5434b58a3aa4" />
+<img width="1877" height="883" alt="image" src="https://github.com/user-attachments/assets/964b1385-7a2a-474a-82e4-e3d9bbc3974e" />
+
+
 **Project Status**: ✅ **COMPLETED** - All lab requirements met with comprehensive problem-solving documentation and working external access
