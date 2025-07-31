@@ -119,8 +119,7 @@ Error: Reference to undeclared resource
 
 **External URL**: http://4.157.192.48
 
-<img width="1894" height="963" alt="image" src="https://github.com/user-attachments/assets/c71cb714-7596-4c9e-b2ef-e56060b043f8" />
-
+<img width="1916" height="867" alt="image" src="https://github.com/user-attachments/assets/ee54fa18-5aea-4ee6-b8af-9ea0d336cc92" />
 
 **Available Endpoints**:
 - **Health Check**: `GET /health` - Returns application status
